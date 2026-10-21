@@ -462,11 +462,11 @@
   "presets": {
     "balance": {
       "*": {
-        "cpu.latencyTime": 0.2,
+        "cpu.latencyTime": 0.1,
         "cpu.slowLimitPower": 2.0,
-        "cpu.fastLimitPower": 2.0,
+        "cpu.fastLimitPower": 4.0,
         "cpu.fastLimitCapacity": 16.0,
-        "cpu.margin": 0.3
+        "cpu.margin": 0.35
       },
       "idle": {
         "cpu.baseSampleTime": 0.04,
@@ -504,10 +504,11 @@
     "powersave": {
       "*": {
         "cpu.latencyTime": 0.4,
-        "cpu.slowLimitPower": 1.0,
+        "cpu.slowLimitPower": 0.75,
         "cpu.fastLimitPower": 1.0,
         "cpu.fastLimitCapacity": 4.0,
-        "cpu.margin": 0.1
+        "cpu.margin": 0.1,
+        "cpu.limitEfficiency": true
       },
       "idle": {
         "cpu.baseSampleTime": 0.04,

@@ -42,8 +42,8 @@
           "nr": 4,
           "typicalPower": 0.35,
           "typicalFreq": 1.8,
-          "sweetFreq": 1.4,
-          "plainFreq": 1.2,
+          "sweetFreq": 1.6,
+          "plainFreq": 1.4,
           "freeFreq": 0.7
         },
         {
@@ -52,7 +52,7 @@
           "typicalPower": 1.5,
           "typicalFreq": 2.0,
           "sweetFreq": 1.7,
-          "plainFreq": 1.2,
+          "plainFreq": 1.4,
           "freeFreq": 1
         },
         {
@@ -445,7 +445,7 @@
       "fastLimitRecoverScale": 0.3,
       "predictThd": 0.3,
       "margin": 0.2,
-      "burst": 0.0,
+      "burst": 0.1,
       "guideCap": true,
       "limitEfficiency": false
     },
@@ -467,11 +467,11 @@
   "presets": {
     "balance": {
       "*": {
-        "cpu.latencyTime": 0.2,
-        "cpu.slowLimitPower": 2.0,
-        "cpu.fastLimitPower": 2.0,
+        "cpu.latencyTime": 0.1,
+        "cpu.slowLimitPower": 3.0,
+        "cpu.fastLimitPower": 6.0,
         "cpu.fastLimitCapacity": 16.0,
-        "cpu.margin": 0.2
+        "cpu.margin": 0.3
       },
       "idle": {
         "cpu.baseSampleTime": 0.04,
@@ -508,42 +508,43 @@
     },
     "powersave": {
       "*": {
-        "cpu.latencyTime": 0.8, 
-        "cpu.slowLimitPower": 1.0, 
-        "cpu.fastLimitPower": 1.0, 
-        "cpu.fastLimitCapacity": 1.0, 
-        "cpu.margin": 0.08
-      }, 
+        "cpu.latencyTime": 0.8,
+        "cpu.slowLimitPower": 0.75,
+        "cpu.fastLimitPower": 1.0,
+        "cpu.fastLimitCapacity": 1.0,
+        "cpu.margin": 0.08,
+        "cpu.limitEfficiency": true
+      },
       "idle": {
-        "cpu.baseSampleTime": 0.04, 
-        "cpu.baseSlackTime": 0.08, 
-        "cpu.predictThd": 1.0, 
-        "cpu.limitEfficiency": true, 
+        "cpu.baseSampleTime": 0.04,
+        "cpu.baseSlackTime": 0.08,
+        "cpu.predictThd": 1.0,
+        "cpu.limitEfficiency": true,
         "sched.scene": "idle"
-      }, 
+      },
       "touch": {
-        "cpu.baseSampleTime": 0.04, 
+        "cpu.baseSampleTime": 0.04,
         "sched.scene": "touch"
-      }, 
+      },
       "trigger": {
-        "cpu.latencyTime": 0.0, 
-        "cpu.margin": 0.15, 
+        "cpu.latencyTime": 0.0,
+        "cpu.margin": 0.15,
         "sched.scene": "touch"
-      }, 
+      },
       "gesture": {
-        "cpu.margin": 0.15, 
+        "cpu.margin": 0.15,
         "sched.scene": "touch"
-      }, 
+      },
       "junk": {
-        "cpu.burst": 0.1, 
+        "cpu.burst": 0.1,
         "sched.scene": "touch"
-      }, 
+      },
       "switch": {
-        "cpu.latencyTime": 0.0, 
-        "cpu.slowLimitPower": 1.5, 
-        "cpu.fastLimitPower": 2.5, 
-        "cpu.fastLimitRecoverScale": 0.1, 
-        "cpu.margin": 0.1, 
+        "cpu.latencyTime": 0.0,
+        "cpu.slowLimitPower": 1.5,
+        "cpu.fastLimitPower": 2.5,
+        "cpu.fastLimitRecoverScale": 0.1,
+        "cpu.margin": 0.1,
         "sched.scene": "boost"
       }
     },
@@ -617,27 +618,21 @@
         "sched.scene": "boost"
       }
     },
-    "crazy":{
+    "crazy": {
       "*": {
-        "cpu.latencyTime": 0.0, 
-        "cpu.slowLimitPower": 999.0, 
-        "cpu.fastLimitPower": 999.0, 
-        "cpu.fastLimitCapacity": 999.0, 
+        "cpu.latencyTime": 0.0,
+        "cpu.slowLimitPower": 999.0,
+        "cpu.fastLimitPower": 999.0,
+        "cpu.fastLimitCapacity": 999.0,
         "cpu.margin": 1.0,
         "cpu.burst": 1.0
-      }, 
-      "idle": {
-      }, 
-      "touch": {
-      }, 
-      "trigger": {
-      }, 
-      "gesture": {
-      }, 
-      "junk": {
-      }, 
-      "switch": {
-      }
+      },
+      "idle": {},
+      "touch": {},
+      "trigger": {},
+      "gesture": {},
+      "junk": {},
+      "switch": {}
     }
   }
 }

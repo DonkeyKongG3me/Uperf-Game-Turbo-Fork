@@ -38,14 +38,24 @@
       "enable": true,
       "powerModel": [
         {
-          "efficiency": 100,
-          "nr": 4,
-          "typicalPower": 1.2,
-          "typicalFreq": 1.1,
-          "sweetFreq": 0.8,
-          "plainFreq": 0.6,
-          "freeFreq": 0.4
+          "efficiency": 160,
+          "nr": 2,
+          "typicalPower": 1.1,
+          "typicalFreq": 1.6,
+          "sweetFreq": 1.1,
+          "plainFreq": 0.9,
+          "freeFreq": 0.5
+        },
+        {
+          "efficiency": 160,
+          "nr": 2,
+          "typicalPower": 1.89,
+          "typicalFreq": 2.1,
+          "sweetFreq": 1.4,
+          "plainFreq": 1.0,
+          "freeFreq": 0.6
         }
+      ]
     },
     "sysfs": {
       "enable": true,
@@ -450,8 +460,7 @@
         "cpu.slowLimitPower": 999.0,
         "cpu.fastLimitPower": 999.0,
         "cpu.fastLimitCapacity": 999.0,
-                "cpu.margin": 1,
-
+        "cpu.margin": 1,
         "cpu.burst": 1.0
       },
       "idle": {
@@ -473,13 +482,14 @@
         "sched.scene": "boost"
       }
     },
-        "powersave": {
+    "powersave": {
       "*": {
         "cpu.latencyTime": 0.4,
-        "cpu.slowLimitPower": 1.0,
+        "cpu.slowLimitPower": 0.75,
         "cpu.fastLimitPower": 1.0,
         "cpu.fastLimitCapacity": 4.0,
-        "cpu.margin": 0.09
+        "cpu.margin": 0.09,
+        "cpu.limitEfficiency": true
       },
       "idle": {
         "cpu.baseSampleTime": 0.04,
@@ -524,8 +534,7 @@
         "cpu.slowLimitPower": 999.0,
         "cpu.fastLimitPower": 999.0,
         "cpu.fastLimitCapacity": 999.0,
-                "cpu.margin": 1,
-
+        "cpu.margin": 1,
         "cpu.burst": 1.0
       },
       "idle": {

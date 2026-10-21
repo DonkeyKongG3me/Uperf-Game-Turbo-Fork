@@ -454,12 +454,12 @@
   "presets": {
     "balance": {
       "*": {
-        "cpu.latencyTime": 0.2,
+        "cpu.latencyTime": 0.1,
         "cpu.slowLimitPower": 2,
-        "cpu.fastLimitPower": 2,
-        "cpu.fastLimitCapacity": 16,
+        "cpu.fastLimitPower": 4.0,
+        "cpu.fastLimitCapacity": 16.0,
         "cpu.fastLimitRecoverScale": 0.4,
-        "cpu.margin": 0.3,
+        "cpu.margin": 0.35,
         "sysfs.ddrboost": "1",
         "sysfs.cciboost": "1"
       },
@@ -498,101 +498,102 @@
     },
     "powersave": {
       "*": {
-        "cpu.latencyTime": 0.8, 
-        "cpu.slowLimitPower": 1.0, 
-        "cpu.fastLimitPower": 1.0, 
-        "cpu.fastLimitCapacity": 1.0, 
-        "cpu.margin": 0.05
-      }, 
+        "cpu.latencyTime": 0.8,
+        "cpu.slowLimitPower": 0.75,
+        "cpu.fastLimitPower": 1.0,
+        "cpu.fastLimitCapacity": 1.0,
+        "cpu.margin": 0.05,
+        "cpu.limitEfficiency": true
+      },
       "idle": {
-        "cpu.baseSampleTime": 0.04, 
-        "cpu.baseSlackTime": 0.08, 
-        "cpu.predictThd": 1.0, 
-        "cpu.limitEfficiency": true, 
+        "cpu.baseSampleTime": 0.04,
+        "cpu.baseSlackTime": 0.08,
+        "cpu.predictThd": 1.0,
+        "cpu.limitEfficiency": true,
         "sched.scene": "idle"
-      }, 
+      },
       "touch": {
-        "cpu.baseSampleTime": 0.04, 
+        "cpu.baseSampleTime": 0.04,
         "sched.scene": "touch"
-      }, 
+      },
       "trigger": {
-        "cpu.latencyTime": 0.0, 
-        "cpu.margin": 0.15, 
+        "cpu.latencyTime": 0.0,
+        "cpu.margin": 0.15,
         "sched.scene": "touch"
-      }, 
+      },
       "gesture": {
-        "cpu.margin": 0.15, 
+        "cpu.margin": 0.15,
         "sched.scene": "touch"
-      }, 
+      },
       "junk": {
-        "cpu.burst": 0.1, 
+        "cpu.burst": 0.1,
         "sched.scene": "touch"
-      }, 
+      },
       "switch": {
-        "cpu.latencyTime": 0.0, 
-        "cpu.slowLimitPower": 1.5, 
-        "cpu.fastLimitPower": 2.5, 
-        "cpu.fastLimitRecoverScale": 0.1, 
-        "cpu.margin": 0.15, 
+        "cpu.latencyTime": 0.0,
+        "cpu.slowLimitPower": 1.5,
+        "cpu.fastLimitPower": 2.5,
+        "cpu.fastLimitRecoverScale": 0.1,
+        "cpu.margin": 0.15,
         "sched.scene": "boost"
       }
-    }, 
+    },
     "performance": {
       "*": {
-        "cpu.latencyTime": 0.0, 
-        "cpu.slowLimitPower": 10.0, 
-        "cpu.fastLimitPower": 20.0, 
-        "cpu.fastLimitCapacity": 360.0, 
+        "cpu.latencyTime": 0.0,
+        "cpu.slowLimitPower": 10.0,
+        "cpu.fastLimitPower": 20.0,
+        "cpu.fastLimitCapacity": 360.0,
         "cpu.margin": 0.32,
         "cpu.burst": 0.34
-      }, 
+      },
       "idle": {
         "sched.scene": "idle"
-      }, 
+      },
       "touch": {
         "cpu.margin": 0.5,
         "sched.scene": "touch"
-      }, 
+      },
       "trigger": {
         "cpu.margin": 0.65,
         "sched.scene": "touch"
-      }, 
+      },
       "gesture": {
-        "cpu.margin": 0.6, 
+        "cpu.margin": 0.6,
         "sched.scene": "touch"
-      }, 
+      },
       "junk": {
-        "cpu.burst": 0.7, 
+        "cpu.burst": 0.7,
         "sched.scene": "touch"
-      }, 
+      },
       "switch": {
-        "cpu.burst": 0.7, 
+        "cpu.burst": 0.7,
         "sched.scene": "boost"
       }
-    }, 
+    },
     "fast": {
       "*": {
-        "cpu.latencyTime": 0.0, 
-        "cpu.slowLimitPower": 999.0, 
-        "cpu.fastLimitPower": 999.0, 
-        "cpu.fastLimitCapacity": 999.0, 
+        "cpu.latencyTime": 0.0,
+        "cpu.slowLimitPower": 999.0,
+        "cpu.fastLimitPower": 999.0,
+        "cpu.fastLimitCapacity": 999.0,
         "cpu.burst": 1.0
-      }, 
+      },
       "idle": {
         "sched.scene": "idle"
-      }, 
+      },
       "touch": {
         "sched.scene": "touch"
-      }, 
+      },
       "trigger": {
         "sched.scene": "touch"
-      }, 
+      },
       "gesture": {
         "sched.scene": "touch"
-      }, 
+      },
       "junk": {
         "sched.scene": "touch"
-      }, 
+      },
       "switch": {
         "sched.scene": "boost"
       }

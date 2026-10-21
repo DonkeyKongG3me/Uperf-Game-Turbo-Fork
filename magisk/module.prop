@@ -1,8 +1,7 @@
 id=uperf
-name=Uperf Game Turbo
-version=️1.35 based on uperf 904
-versionCode=240424
-author=Matt Yang（吟惋兮改）
-description=❤️欢迎使用Uperf Game Turbo，使用时有问题可反馈至yinwanxi0107@gmail.com❤️///❤️Welcome to use Uperf Game Turbo. If you have any questions, please send feedback to yinwanxi0107@gmail.com❤️
-updateJson=https://github.com/yinwanxi/Uperf-Game-Turbo/raw/master/version.json
-ASOPT_VERSIONCODE=260
+name=Uperf Game Turbo Fork
+version=1.0
+versionCode=100000
+author=DonkeyKongG3me
+description=This module lets you set performance profiles to individual apps using Uperf. Supports over 120+ SoCs. Click Action to select which apps use the Uperf game booster.
+updateJson=https://raw.githubusercontent.com/DonkeyKongG3me/Uperf-Game-Turbo-Fork/main/update.json

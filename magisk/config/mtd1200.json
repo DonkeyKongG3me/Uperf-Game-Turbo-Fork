@@ -463,12 +463,12 @@
   "presets": {
     "balance": {
       "*": {
-        "cpu.latencyTime": 0.2,
+        "cpu.latencyTime": 0.1,
         "cpu.slowLimitPower": 3,
-        "cpu.fastLimitPower": 3,
-        "cpu.fastLimitCapacity": 16,
+        "cpu.fastLimitPower": 6.0,
+        "cpu.fastLimitCapacity": 16.0,
         "cpu.fastLimitRecoverScale": 0.4,
-        "cpu.margin": 0.25,
+        "cpu.margin": 0.3,
         "sysfs.ddrboost": "1",
         "sysfs.cciboost": "1"
       },
@@ -508,12 +508,13 @@
     "powersave": {
       "*": {
         "cpu.latencyTime": 0.8,
-        "cpu.slowLimitPower": 1,
+        "cpu.slowLimitPower": 0.75,
         "cpu.fastLimitPower": 1,
         "cpu.fastLimitCapacity": 1,
         "cpu.margin": 0.1,
-        "sysfs.ddrboost": "1",
-        "sysfs.cciboost": "1"
+        "sysfs.ddrboost": "0",
+        "sysfs.cciboost": "0",
+        "cpu.limitEfficiency": true
       },
       "idle": {
         "cpu.baseSampleTime": 0.04,
@@ -565,7 +566,7 @@
         "sched.scene": "idle"
       },
       "touch": {
-      "cpu.margin": 0.68,
+        "cpu.margin": 0.68,
         "sched.scene": "touch"
       },
       "trigger": {

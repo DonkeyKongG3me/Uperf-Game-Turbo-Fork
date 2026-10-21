@@ -1,0 +1,724 @@
+<!doctype html>
+<html lang="en" data-skin="miuix">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark" id="metaScheme">
+<title>Uperf Game Turbo</title>
+<link rel="stylesheet" href="skin-miuix.css">
+<link rel="stylesheet" href="skin-m3e.css">
+<script>
+  (function () {
+    var c = null;
+    try { c = JSON.parse(localStorage.getItem("uperf_ui_cache") || "null"); } catch (e) {}
+    var r = document.documentElement;
+    if (c && (c.skin === "miuix" || c.skin === "m3e")) r.dataset.skin = c.skin;
+    var t = c && c.theme;
+    var dark = t === "dark" || (t !== "light" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+    if (dark) r.setAttribute("data-dark", "");
+    if (c && c.css) document.write('<style id="dynColors">' + String(c.css).replace(/</g, "") + "</style>");
+  })();
+</script>
+<style>
+  html {
+    -webkit-text-size-adjust: 100%; -webkit-tap-highlight-color: transparent;
+    --lvl-eco: #1272B6; --lvl-bal: #2E7D32; --lvl-rapid: #B85000; --lvl-ext: #D32F2F;
+  }
+  html[data-dark] { --lvl-eco: #A9D9FF; --lvl-bal: #9BE39B; --lvl-rapid: #FFAA4F; --lvl-ext: #FF6B63; }
+  *, *::before, *::after { box-sizing: border-box; }
+  body {
+    margin: 0; height: 100vh; overflow: hidden;
+    -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
+  }
+  input { -webkit-user-select: text; user-select: text; }
+  img { -webkit-user-drag: none; pointer-events: none; }
+  [hidden] { display: none !important; }
+  button, input { font: inherit; color: inherit; }
+  button { background: none; border: 0; padding: 0; cursor: pointer; }
+  p, h1, h2, dl, dd, pre { margin: 0; }
+  .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  svg.i { width: 24px; height: 24px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .screen {
+    position: fixed; inset: 0; overflow-x: hidden; overflow-y: auto; overscroll-behavior-y: none;
+    -webkit-overflow-scrolling: touch; z-index: 1;
+  }
+  .screen > .bounce { display: flow-root; }
+  .screen > .bounce { will-change: transform; }
+  .screen.on-top { z-index: 3; }
+  .row { display: flex; align-items: center; width: 100%; text-align: start; }
+  .row-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .row-title, .row-sum { overflow-wrap: anywhere; }
+  .row-sum.handle { color: #8e8e93; }
+  html[data-dark] .row-sum.handle { color: #98989d; }
+  .dlg-link { color: #0a84ff; font-weight: 600; text-decoration: none; -webkit-user-select: text; user-select: text; }
+  html[data-dark] .dlg-link { color: #64b5ff; }
+  .slider { position: relative; touch-action: pan-y; cursor: pointer; }
+  .slider input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; pointer-events: none; -webkit-appearance: none; appearance: none; }
+  .glider { position: relative; display: flex; touch-action: pan-y; }
+  .glider > .ind { position: absolute; left: 0; pointer-events: none; z-index: 0; transform: translateX(var(--ix, 0px)); width: var(--iw, 0px); }
+  .glider > :not(.ind) { position: relative; z-index: 1; }
+  .glider.no-anim > .ind { transition: none !important; }
+  .pillnav { position: fixed; left: 50%; transform: translateX(-50%); z-index: 20; touch-action: none; }
+  .scrim { position: fixed; inset: 0; z-index: 40; display: flex; }
+  .snackbar { position: fixed; left: 50%; z-index: 50; transform: translateX(-50%); }
+  .topbar { position: fixed; top: 0; left: 0; right: 0; z-index: 15; display: flex; align-items: center; }
+  .screen[data-off] { visibility: hidden; pointer-events: none; }
+  .screen.on-top { box-shadow: -12px 0 32px rgba(0, 0, 0, .18); }
+  .pillnav { transition: transform .38s cubic-bezier(.2, .8, .2, 1), opacity .25s; }
+  .pillnav.away { transform: translate(-50%, 180%); opacity: 0; pointer-events: none; }
+  .status { width: auto; display: flex; text-align: start; }
+  .status-text > span { display: block; }
+  .search-row { display: flex; align-items: center; gap: 8px; }
+  .search-row .search { flex: 1; min-width: 0; }
+  .sort-btn { flex: none; display: grid; place-items: center; }
+  body.modal .screen { overflow: hidden !important; }
+  .scrim { touch-action: none; overscroll-behavior: contain; }
+  .screen { touch-action: pan-y; }
+  .scrim .dialog { touch-action: none; overscroll-behavior: contain; }
+  .scrim .dialog.scrollable { touch-action: pan-y; }
+  .dlg-grip { touch-action: none; }
+  .dlg-grip { display: block; width: 40px; height: 5px; border-radius: 3px; margin: -10px auto 14px; background: currentColor; opacity: .28; }
+  .swipe-hint {
+    position: fixed; left: 50%; bottom: calc(var(--window-inset-bottom, env(safe-area-inset-bottom, 0px)) + 28px); z-index: 30;
+    display: flex; align-items: center; gap: 10px; padding: 12px 18px; border-radius: 999px; pointer-events: none;
+    background: rgba(20, 20, 20, .78); color: #fff; font-size: 14px; white-space: nowrap;
+    -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px);
+    transform: translate(-50%, 16px); opacity: 0; transition: transform .3s cubic-bezier(.2, .8, .2, 1), opacity .25s;
+  }
+  .swipe-hint.show { transform: translate(-50%, 0); opacity: 1; }
+  .swipe-hint .i { width: 22px; height: 22px; animation: hint-sway 1.2s ease-in-out infinite; }
+  @keyframes hint-sway { 0%, 100% { transform: translateX(-3px); } 50% { transform: translateX(5px); } }
+  .snackbar { touch-action: pan-y; }
+  .screen.swipe-layer { will-change: transform; }
+  .screen.in-transit .topbar::before, .screen.in-transit .back-btn,
+  body.swiping .screen .status, body.swiping .screen .banner { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+  body.swiping .opt-fx, body.swiping .opt-fx *, body.swiping .radio::before { animation-play-state: paused !important; }
+  .status-icon { position: relative; overflow: visible; }
+  .status[data-mode="idle"] .status-icon .i { animation: rocket-hover 3s ease-in-out infinite; }
+  .status[data-mode="active"] .status-icon .i { animation: rocket-hover 1.4s ease-in-out infinite; }
+  .status[data-mode="active"] .status-icon::after {
+    content: ""; position: absolute; left: 50%; top: 66%; width: 8px; height: 12px; margin-left: -4px; border-radius: 50% 50% 50% 50% / 30% 30% 70% 70%;
+    background: radial-gradient(circle at 50% 30%, #fff6c8, #ffb347 45%, rgba(255, 90, 40, .0) 75%);
+    animation: rocket-flame .18s ease-in-out infinite alternate; pointer-events: none;
+  }
+  @keyframes rocket-hover { 0%, 100% { transform: translateY(1px); } 50% { transform: translateY(-2px); } }
+  @keyframes rocket-flame { from { transform: scaleY(.75); opacity: .75; } to { transform: scaleY(1.15); opacity: 1; } }
+  @media (prefers-reduced-motion: reduce) { .status-icon .i, .status-icon::after, .swipe-hint .i { animation: none !important; } }
+  .topbar { transition: transform .5s cubic-bezier(.2, .8, .2, 1); }
+  .screen.in-transit .topbar { transform: translateY(-18px); transition: none; }
+  .screen.in-transit .topbar::before, .screen.in-transit .topbar::after,
+  .screen.in-transit .topbar > * { opacity: 0 !important; transition: none !important; }
+  .topbar > .back-btn { transition: opacity .35s ease .05s, transform .3s; }
+  .slider-row.locked .row-title { opacity: .45; }
+  .slider-row.locked .slider { opacity: .38; filter: grayscale(1); pointer-events: none; }
+  .one-line { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  html[data-skin] .small-title + .group.facts { margin-top: 0 !important; }
+
+  .mod-pill {
+    display: flex; align-items: center; gap: 10px; margin: 8px 16px 0; padding: 12px 16px; border-radius: 18px;
+    font-size: 13px; line-height: 1.35; background: color-mix(in srgb, currentColor 10%, transparent);
+  }
+  .mod-pill .i { width: 20px; height: 20px; }
+  .mod-pill { width: calc(100% - 32px); text-align: start; cursor: pointer; transition: transform .2s; }
+  .mod-pill:active { transform: scale(.98); }
+  .mod-pill-text { flex: 1; min-width: 0; }
+  .mod-pill .chev { margin-left: auto; opacity: .7; }
+  html[data-skin="miuix"] .mod-pill {
+    margin: 8px 12px 0; border-radius: 26px; font-size: var(--mx-body2); color: var(--mx-summary);
+    background: var(--mx-glass-alert-fill); border: 1px solid var(--mx-glass-edge-soft);
+    -webkit-backdrop-filter: blur(26px) saturate(1.65); backdrop-filter: blur(26px) saturate(1.65);
+    box-shadow: var(--mx-glass-shadow); width: calc(100% - 24px);
+  }
+  html[data-skin="miuix"] .mod-pill .chev { color: var(--mx-actions); opacity: 1; width: 20px; height: 20px; }
+  html[data-skin="m3e"] .mod-pill {
+    margin: 8px 16px 0; border-radius: var(--md-shape-l); font: var(--md-body-m);
+    background: var(--md-surface-container-high); color: var(--md-on-surface-variant);
+  }
+  #moduleGroup { position: relative; }
+  #moduleGroup::after { content: ""; position: absolute; inset: 0; border-radius: inherit; corner-shape: inherit; pointer-events: none; opacity: 0; z-index: 2; }
+  html[data-skin="miuix"] #moduleGroup::after { background: color-mix(in srgb, var(--mx-primary) 22%, transparent); }
+  html[data-skin="m3e"] #moduleGroup::after { background: color-mix(in srgb, var(--md-primary) 22%, transparent); border-radius: var(--md-list-outer); }
+  html[data-skin="miuix"]:not([data-tinted]) #moduleGroup::after { background: rgba(0, 0, 0, .07); }
+  html[data-skin="miuix"][data-dark]:not([data-tinted]) #moduleGroup::after { background: rgba(255, 255, 255, .16); }
+  #moduleGroup.pulse::after { animation: mod-pulse .25s ease-in-out 2; }
+  @keyframes mod-pulse { 0%, 100% { opacity: 0; } 50% { opacity: 1; } }
+  html.mod-off .opt-fx::before, html.mod-off .opt-fx::after, html.mod-off .rp, html.mod-off .radio::before { animation-play-state: paused !important; }
+  .status-icon .ban { display: none; position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); stroke-width: 1.7; pointer-events: none; }
+  .status-icon .ban .ko { stroke: var(--ban-bg, transparent); stroke-width: 2.8; }
+  .status[data-off] .status-icon .i { animation: none !important; }
+  .status[data-off] .status-icon .ban { display: block; }
+  .status[data-off] .status-icon .i:not(.ban) { opacity: .62; }
+  html[data-skin="miuix"] .status[data-off] .status-icon { background: var(--mx-error-container); color: var(--mx-error); --ban-bg: var(--mx-error-container); }
+  html[data-skin="m3e"] .status[data-off] .status-icon { background: var(--md-error-container); color: var(--md-error); --ban-bg: var(--md-error-container); }
+  html[data-skin="miuix"] .status[data-off] .status-icon .ban { width: 42px; height: 42px; }
+  html[data-skin="m3e"] .status[data-off] .status-icon .ban { width: 48px; height: 48px; }
+
+  .glider > .ind::before {
+    content: ""; position: absolute; left: 8%; right: 8%; bottom: -7px; height: 16px; border-radius: 50%;
+    background: radial-gradient(closest-side, var(--glow, currentColor), transparent); opacity: 0;
+    transition: opacity .2s; filter: blur(2px); pointer-events: none;
+  }
+  .glider.dragging > .ind::before { opacity: 1; }
+
+  [data-lvl="eco"] { --lvl: var(--lvl-eco); }
+  [data-lvl="bal"] { --lvl: var(--lvl-bal); }
+  [data-lvl="rapid"] { --lvl: var(--lvl-rapid); }
+  [data-lvl="ext"] { --lvl: var(--lvl-ext); }
+  .hl[data-lvl], .opt[data-lvl] .pn { color: var(--lvl); font-weight: 600; }
+  .opt, .app-row { position: relative; overflow: hidden; isolation: isolate; }
+  .opt-fx { position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity .4s; z-index: 0; contain: layout paint; }
+  .opt > :not(.opt-fx), .app-row > :not(.opt-fx) { position: relative; z-index: 1; }
+  .opt-fx::before, .opt-fx::after { content: ""; position: absolute; inset: 0; }
+  .fx-live .opt-fx { opacity: 1; }
+  .app-row.fx-live .opt-fx { opacity: .8; }
+  [data-lvl].fx-live { --sweep: 3s; --rip: 6.1s; --tint: 10%; }
+  [data-lvl="bal"].fx-live { --sweep: 2.5s; --rip: 3.5s; --tint: 12%; }
+  [data-lvl="rapid"].fx-live { --sweep: 2s; --rip: 2s; --tint: 14%; }
+  [data-lvl="ext"].fx-live { --sweep: 1.6s; --rip: 1.2s; --tint: 16%; }
+  .fx-live .opt-fx::before {
+    right: auto; width: 300%;
+    background: linear-gradient(105deg, transparent 35%, color-mix(in srgb, var(--lvl) 46%, transparent) 50%, transparent 65%);
+    opacity: calc(.52 + var(--shk, 0) * .48); transition: opacity .2s linear;
+    animation: fx-sweep var(--sweep) linear infinite; will-change: transform;
+  }
+  .fx-live .opt-fx::after { background: linear-gradient(to top, color-mix(in srgb, var(--lvl) var(--tint), transparent), transparent 65%); }
+  [data-lvl="ext"].fx-live .opt-fx::after {
+    background: radial-gradient(85% 70% at 50% 118%, color-mix(in srgb, var(--lvl) 36%, transparent), transparent 72%);
+    transform-origin: bottom; animation: fx-ember 1.3s ease-in-out infinite alternate;
+  }
+  .rp {
+    position: absolute; top: 50%; left: 0; width: var(--d, 16px); height: var(--d, 16px); margin: calc(var(--d, 16px) / -2) 0 0 calc(var(--d, 16px) / -2);
+    opacity: 0;
+    translate: calc(var(--jx, 0) * var(--k, 1) * 1px) calc(var(--jy, 0) * var(--k, 1) * 1px);
+  }
+  .rp::before {
+    content: ""; position: absolute; inset: 0; border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%,
+      color-mix(in srgb, var(--lvl) 80%, #fff) 0,
+      color-mix(in srgb, var(--lvl) 72%, transparent) 55%,
+      color-mix(in srgb, var(--lvl) 50%, transparent) 100%);
+    scale: calc(1 + var(--shk, 0) * 1.3);
+    transition: scale .2s linear;
+  }
+  .rx { position: absolute; inset: 0; opacity: 0; visibility: hidden; transition: opacity .6s ease, visibility 0s linear .6s; }
+  .shk .rx { opacity: 1; visibility: visible; transition: opacity .25s ease, visibility 0s; }
+  .calm .rx .rp { animation-play-state: paused; }
+  .rp:nth-child(3n+1) { --d: 16px; --k: 1; }
+  .rp:nth-child(3n+2) { --d: 10px; --k: 1.6; }
+  .rp:nth-child(3n) { --d: 22px; --k: .7; }
+  .fx-live .rp { animation: fx-ripple var(--rip) cubic-bezier(.3, .25, .65, .9) infinite; }
+  .fx-live .rp:nth-child(1) { top: 50%; animation-delay: 0s; }
+  .fx-live .rp:nth-child(2) { top: 28%; animation-delay: calc(var(--rip) / -9); }
+  .fx-live .rp:nth-child(3) { top: 74%; animation-delay: calc(var(--rip) / -4.5); }
+  .fx-live .rp:nth-child(4) { top: 40%; animation-delay: calc(var(--rip) / -3); }
+  .fx-live .rp:nth-child(5) { top: 18%; animation-delay: calc(var(--rip) / -2.25); }
+  .fx-live .rp:nth-child(6) { top: 62%; animation-delay: calc(var(--rip) / -1.8); }
+  .fx-live .rp:nth-child(7) { top: 84%; animation-delay: calc(var(--rip) / -1.5); }
+  .fx-live .rp:nth-child(8) { top: 34%; animation-delay: calc(var(--rip) / -1.286); }
+  .fx-live .rp:nth-child(9) { top: 68%; animation-delay: calc(var(--rip) / -1.125); }
+  .fx-live .rx .rp:nth-child(1) { top: 12%; animation-delay: calc(var(--rip) * -.0417); }
+  .fx-live .rx .rp:nth-child(2) { top: 46%; animation-delay: calc(var(--rip) * -.125); }
+  .fx-live .rx .rp:nth-child(3) { top: 22%; animation-delay: calc(var(--rip) * -.2083); }
+  .fx-live .rx .rp:nth-child(4) { top: 70%; animation-delay: calc(var(--rip) * -.2917); }
+  .fx-live .rx .rp:nth-child(5) { top: 90%; animation-delay: calc(var(--rip) * -.375); }
+  .fx-live .rx .rp:nth-child(6) { top: 44%; animation-delay: calc(var(--rip) * -.4583); }
+  .fx-live .rx .rp:nth-child(7) { top: 30%; animation-delay: calc(var(--rip) * -.5417); }
+  .fx-live .rx .rp:nth-child(8) { top: 60%; animation-delay: calc(var(--rip) * -.625); }
+  .fx-live .rx .rp:nth-child(9) { top: 82%; animation-delay: calc(var(--rip) * -.7083); }
+  .fx-live .rx .rp:nth-child(10) { top: 54%; animation-delay: calc(var(--rip) * -.7917); }
+  .fx-live .rx .rp:nth-child(11) { top: 14%; animation-delay: calc(var(--rip) * -.875); }
+  .fx-live .rx .rp:nth-child(12) { top: 36%; animation-delay: calc(var(--rip) * -.9583); }
+  .radio { position: relative; }
+  .radio::before { content: ""; position: absolute; inset: 0; border-radius: 50%; pointer-events: none; border: 2px solid var(--lvl, currentColor); opacity: 0; }
+  .opt.fx-live .radio::before { animation: fx-pulse calc(var(--rip) * .6) ease-out infinite; }
+  @keyframes fx-sweep { from { transform: translateX(-66.667%); } to { transform: translateX(0); } }
+  @keyframes fx-ember { from { opacity: .45; transform: scaleY(.9); } to { opacity: 1; transform: scaleY(1.1); } }
+  @keyframes fx-ripple {
+    0% { transform: translateX(0) scale(.4); opacity: 0; }
+    15% { opacity: .85; }
+    70% { opacity: .55; }
+    100% { transform: translateX(calc(var(--w, 360px) + 30px)) scale(1.25); opacity: 0; }
+  }
+  @keyframes fx-pulse {
+    0% { transform: scale(1); opacity: .6; }
+    100% { transform: scale(1.9); opacity: 0; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .opt-fx::before, .opt-fx::after, .radio::before, .rp { animation: none !important; }
+  }
+  .pull-rocket {
+    --rk-size: 85px;
+    --rk: #3482FF; --rk-page: #000; --ign: 0; --tilt: 0deg; --gap: 12px;
+    position: absolute; left: 50%; top: 0; width: var(--rk-size); height: calc(var(--rk-size) * 1.0116); margin-left: calc(var(--rk-size) / -2);
+    transform: translateY(calc(-100% - var(--gap))); pointer-events: none; contain: layout style;
+    transition: opacity .2s;
+  }
+  html[data-skin="miuix"] .pull-rocket { --rk: var(--mx-primary); --rk-page: var(--mx-page); }
+  html[data-skin="m3e"] .pull-rocket { --rk: var(--md-primary); --rk-page: var(--md-page); }
+  .pull-rocket.gone { opacity: 0; transition: none; }
+  .pr-probe { position: absolute; width: 0; height: var(--inset-top, 0px); visibility: hidden; }
+  .pr-tilt, .pr-shake { position: absolute; inset: 0; display: block; }
+  .pr-tilt { transform: rotate(var(--tilt)); transform-origin: 50% 100%; transition: transform .35s cubic-bezier(.2, .8, .2, 1); }
+  .pull-rocket.pulling .pr-tilt { transition: none; }
+  .pr-svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+  .pr-body { fill: var(--rk); stroke: color-mix(in srgb, var(--rk) 62%, #000); stroke-width: .55; stroke-linejoin: round; }
+  .pr-fin { fill: color-mix(in srgb, var(--rk) 72%, #000); stroke: color-mix(in srgb, var(--rk) 55%, #000); stroke-width: .5; stroke-linejoin: round; }
+  .pr-skirt { fill: #9aa0aa; stroke: #5f646c; stroke-width: .45; stroke-linejoin: round; }
+  html[data-dark] .pr-skirt { fill: #b9bec7; stroke: #7b8089; }
+  .pr-win { fill: var(--rk-page); stroke: #fff; stroke-width: .75; }
+  .pr-shine { fill: none; stroke: #fff; stroke-opacity: .5; stroke-width: .7; stroke-linecap: round; }
+  .pr-band { fill: none; stroke: color-mix(in srgb, var(--rk) 55%, #000); stroke-width: .5; stroke-opacity: .7; }
+  .pr-flame {
+    position: absolute; left: 50%; top: 94%; width: calc(var(--rk-size) * .234); height: calc(var(--rk-size) * .47); margin-left: calc(var(--rk-size) * -.117);
+    transform-origin: 50% 0; transform: scale(calc(.35 + var(--ign) * .5), calc(.15 + var(--ign) * .65));
+    opacity: min(1, calc(var(--ign) * 1.6)); transition: transform .3s ease, opacity .25s ease;
+  }
+  .pull-rocket.pulling .pr-flame { transition: none; }
+  .pr-core, .pr-core::after {
+    position: absolute; inset: 0; border-radius: 50% 50% 50% 50% / 26% 26% 74% 74%; transform-origin: 50% 0;
+  }
+  .pr-core { background: radial-gradient(60% 75% at 50% 18%, #fff3c4 0, #ffb347 48%, rgba(255, 82, 36, .55) 72%, rgba(255, 60, 30, 0) 100%); }
+  .pr-core::after { content: ""; inset: 8% 26% 30%; background: radial-gradient(closest-side, #fff, rgba(255, 246, 200, 0)); }
+  .pull-rocket.armed .pr-core, .pull-rocket.launch .pr-core { animation: pr-flick .09s ease-in-out infinite alternate; }
+  .pull-rocket.armed .pr-shake { animation: pr-rumble .08s linear infinite; }
+  .pr-trail {
+    position: absolute; left: 50%; top: 55%; width: 9px; height: 170px; margin-left: -4.5px; border-radius: 5px;
+    background: linear-gradient(to bottom, rgba(255, 214, 140, .95), rgba(255, 140, 70, .55) 22%, rgba(255, 110, 60, .18) 55%, rgba(255, 110, 60, 0));
+    transform-origin: 50% 0; transform: scaleY(0); opacity: 0;
+  }
+  .pull-rocket.pr-fly { position: fixed; margin: 0; z-index: 30; transform: none; transform-origin: 50% 100%; will-change: transform; transition: none; }
+  .pull-rocket.launch .pr-flame { --ign: 1; transform: scale(1.3, 1.9); opacity: 1; transition: transform .12s ease-out; }
+  .pull-rocket.launch .pr-trail { animation: pr-trail .5s cubic-bezier(.4, 0, .7, .4) forwards; }
+  .pull-rocket.launch .pr-tilt { transition: none; }
+  @keyframes pr-flick { from { transform: scale(.88, .8); opacity: .82; } to { transform: scale(1.06, 1.14); opacity: 1; } }
+  @keyframes pr-rumble { 0%, 100% { transform: translate(0, 0); } 25% { transform: translate(-.7px, .3px); } 50% { transform: translate(.6px, -.2px); } 75% { transform: translate(-.3px, -.3px); } }
+  @keyframes pr-trail { 0% { transform: scaleY(0); opacity: 0; } 18% { opacity: 1; } 100% { transform: scaleY(1); opacity: .85; } }
+  .pr-pad { position: absolute; left: 50%; top: -12px; width: 0; height: 0; pointer-events: none; --smoke: rgba(0, 0, 0, .16); }
+  html[data-dark] .pr-pad { --smoke: rgba(255, 255, 255, .26); }
+  .pr-puff, .pr-flash { position: absolute; left: 0; top: 0; border-radius: 50%; pointer-events: none; will-change: transform, opacity; }
+  .pr-puff { background: radial-gradient(closest-side, var(--smoke), transparent); }
+  .pr-flash { width: 70px; height: 34px; margin: -17px 0 0 -35px; background: radial-gradient(closest-side, rgba(255, 200, 110, .85), rgba(255, 120, 50, .3) 55%, transparent); }
+
+  .fx-off .opt-fx, .screen[data-off] .opt-fx { display: none; }
+  .fx-off .radio::before, .screen[data-off] .radio::before { animation: none !important; }
+  .no-fx .rp, .no-fx .opt-fx::before { display: none; }
+  .no-fx .opt-fx::after, .no-fx .radio::before { animation: none !important; }
+</style>
+</head>
+<body>
+<main class="screen" id="scrHome" aria-labelledby="homeTitle">
+  <div class="topbar" id="homeBar" aria-hidden="true"><span class="topbar-title">Uperf Game Turbo</span></div>
+  <div class="pull-rocket" aria-hidden="true">
+    <span class="pr-probe"></span>
+    <span class="pr-tilt"><span class="pr-shake">
+      <span class="pr-flame"><span class="pr-trail"></span><span class="pr-core"></span></span>
+      <svg class="pr-svg" viewBox="3.4 1.4 17.2 17.4">
+        <path class="pr-fin" d="M7.6 12.4 4.6 15.4v3.2l3-1.6zM16.4 12.4l3 3v3.2l-3-1.6z"/>
+        <path class="pr-skirt" d="M9.3 16h5.4l-.8 2.3h-3.8z"/>
+        <path class="pr-body" d="M12 2.5c3 2.4 4.6 5.9 4.6 9.9v3.8H7.4v-3.8c0-4 1.6-7.5 4.6-9.9z"/>
+        <path class="pr-shine" d="M10.3 5.9c-1 1.5-1.6 3.4-1.7 5.6"/>
+        <circle class="pr-win" cx="12" cy="9.8" r="1.9"/>
+        <path class="pr-band" d="M7.5 13.6h9"/>
+      </svg>
+    </span></span>
+  </div>
+  <div class="pr-pad" aria-hidden="true"></div>
+  <div id="banner" role="status"></div>
+  <header class="page-head">
+    <h1 class="large-title" id="homeTitle">Uperf Game Turbo <span class="title-ver">1.0</span></h1>
+  </header>
+
+  <button class="status" id="status" aria-live="polite" aria-describedby="statusSum">
+    <span class="status-icon" aria-hidden="true">
+      <svg class="i" viewBox="0 0 24 24"><use href="#ic-rocket"/></svg>
+      <svg class="i ban" viewBox="0 0 24 24"><path class="ko" d="M5.3 5.3l13.4 13.4"/><circle cx="12" cy="12" r="9.5"/><path d="M5.3 5.3l13.4 13.4"/></svg>
+    </span>
+    <span class="status-text">
+      <span class="status-title" id="statusTitle">Checking…</span>
+      <span class="status-sum" id="statusSum"></span>
+    </span>
+    <svg class="i chev" viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-chev"/></svg>
+  </button>
+
+  <div class="search-row">
+  <label class="search" id="searchBox">
+    <svg class="i" viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-search"/></svg>
+    <input id="q" type="search" placeholder="Search apps" autocomplete="off" spellcheck="false" aria-label="Search apps">
+    <button class="search-clear" id="clearQ" type="button" aria-label="Clear search" hidden>
+      <svg class="i" viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-close"/></svg>
+    </button>
+  </label>
+  <button class="sort-btn" id="sortBtn" aria-label="Sort apps" aria-haspopup="dialog">
+    <svg class="i" viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-sort"/></svg>
+  </button>
+  </div>
+
+  <div class="tabs glider" role="tablist" aria-label="Which apps to show" id="tabs">
+    <span class="ind" aria-hidden="true"></span>
+    <button class="tab" role="tab" id="tabAll" data-tab="all" aria-selected="true" aria-controls="listPanel">All apps</button>
+    <button class="tab" role="tab" id="tabOn" data-tab="on" aria-selected="false" aria-controls="listPanel">Boosted<span class="count" id="countOn"></span></button>
+    <button class="tab" role="tab" id="tabRecent" data-tab="recent" aria-selected="false" aria-controls="listPanel">Recents</button>
+  </div>
+
+  <section id="listPanel" role="tabpanel" aria-labelledby="tabAll">
+    <div class="list-head" id="recentHead" hidden>
+      <p class="list-note">Apps you changed lately, newest first</p>
+      <button class="btn text" id="clearRecents">
+        <svg class="i" viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-sweep"/></svg>Clear recents
+      </button>
+    </div>
+    <div class="group list" id="list"></div>
+    <div class="empty" id="empty" hidden>
+      <svg class="i empty-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-rocket"/></svg>
+      <p class="empty-title" id="emptyTitle"></p>
+      <p class="empty-sum" id="emptySum"></p>
+    </div>
+    <div class="loading" id="loading" role="status"><span class="spinner" aria-hidden="true"></span>Loading apps…</div>
+  </section>
+  <div class="nav-spacer"></div>
+</main>
+<main class="screen" id="scrSettings" aria-labelledby="setTitle" hidden>
+  <div class="topbar" id="setBar" aria-hidden="true"><span class="topbar-title">Settings</span></div>
+  <div class="pull-rocket" aria-hidden="true">
+    <span class="pr-probe"></span>
+    <span class="pr-tilt"><span class="pr-shake">
+      <span class="pr-flame"><span class="pr-trail"></span><span class="pr-core"></span></span>
+      <svg class="pr-svg" viewBox="3.4 1.4 17.2 17.4">
+        <path class="pr-fin" d="M7.6 12.4 4.6 15.4v3.2l3-1.6zM16.4 12.4l3 3v3.2l-3-1.6z"/>
+        <path class="pr-skirt" d="M9.3 16h5.4l-.8 2.3h-3.8z"/>
+        <path class="pr-body" d="M12 2.5c3 2.4 4.6 5.9 4.6 9.9v3.8H7.4v-3.8c0-4 1.6-7.5 4.6-9.9z"/>
+        <path class="pr-shine" d="M10.3 5.9c-1 1.5-1.6 3.4-1.7 5.6"/>
+        <circle class="pr-win" cx="12" cy="9.8" r="1.9"/>
+        <path class="pr-band" d="M7.5 13.6h9"/>
+      </svg>
+    </span></span>
+  </div>
+  <div class="pr-pad" aria-hidden="true"></div>
+  <header class="page-head">
+    <h1 class="large-title" id="setTitle">Settings</h1>
+  </header>
+
+  <h2 class="small-title">Status</h2>
+  <div class="group" id="moduleGroup">
+    <button class="row sw-row" id="rowModule" role="switch" aria-checked="true" aria-describedby="modSum">
+      <span class="row-text">
+        <span class="row-title" id="modTitle">Service status(On)</span>
+        <span class="row-sum" id="modSum">The service is running. Select apps to boost in the home screen.</span>
+      </span>
+      <span class="switch" aria-hidden="true"><span class="thumb"><svg class="i" viewBox="0 0 24 24"><use href="#ic-check"/></svg></span></span>
+    </button>
+  </div>
+
+  <h2 class="small-title">Appearance</h2>
+  <div class="group">
+    <div class="row block">
+      <div class="row-text"><span class="row-title" id="skinLbl">Style</span></div>
+      <div class="segmented glider" role="radiogroup" aria-labelledby="skinLbl" id="skinSeg">
+        <span class="ind" aria-hidden="true"></span>
+        <button class="seg" role="radio" data-val="miuix" aria-checked="true">
+          <svg class="i seg-check" viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-check"/></svg><span>Miuix</span></button>
+        <button class="seg" role="radio" data-val="m3e" aria-checked="false">
+          <svg class="i seg-check" viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-check"/></svg><span>Material 3 Expressive</span></button>
+      </div>
+    </div>
+    <div class="row block">
+      <div class="row-text"><span class="row-title" id="themeLbl">Theme</span></div>
+      <div class="segmented glider" role="radiogroup" aria-labelledby="themeLbl" id="themeSeg">
+        <span class="ind" aria-hidden="true"></span>
+        <button class="seg" role="radio" data-val="system" aria-checked="true">
+          <svg class="i seg-check" viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-check"/></svg><span>System</span></button>
+        <button class="seg" role="radio" data-val="light" aria-checked="false">
+          <svg class="i seg-check" viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-check"/></svg><span>Light</span></button>
+        <button class="seg" role="radio" data-val="dark" aria-checked="false">
+          <svg class="i seg-check" viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-check"/></svg><span>Dark</span></button>
+      </div>
+    </div>
+    <button class="row sw-row" id="rowDyn" role="switch" aria-checked="false" aria-describedby="dynSum">
+      <span class="row-text">
+        <span class="row-title">Follow wallpaper colors</span>
+        <span class="row-sum" id="dynSum">Use the colors from your wallpaper.</span>
+      </span>
+      <span class="switch" aria-hidden="true"><span class="thumb"><svg class="i" viewBox="0 0 24 24"><use href="#ic-check"/></svg></span></span>
+    </button>
+    <div class="row block" id="accentRow">
+      <div class="row-text">
+        <span class="row-title" id="accentLbl">Accent color</span>
+        <span class="row-sum" id="accentSum">Default</span>
+      </div>
+      <div class="swatches" role="radiogroup" aria-labelledby="accentLbl" id="swatches"></div>
+    </div>
+    <button class="row sw-row" id="rowToasts" role="switch" aria-checked="true" aria-describedby="toastSum">
+      <span class="row-text">
+        <span class="row-title">Toast messages</span>
+        <span class="row-sum" id="toastSum">Allow the app to send toast messages.</span>
+      </span>
+      <span class="switch" aria-hidden="true"><span class="thumb"><svg class="i" viewBox="0 0 24 24"><use href="#ic-check"/></svg></span></span>
+    </button>
+    <button class="row sw-row" id="rowBubbles" role="switch" aria-checked="true" aria-describedby="bubSum">
+      <span class="row-text">
+        <span class="row-title">Interactive bubble animations</span>
+        <span class="row-sum" id="bubSum">Display moving bubble animations on boosted apps.</span>
+      </span>
+      <span class="switch" aria-hidden="true"><span class="thumb"><svg class="i" viewBox="0 0 24 24"><use href="#ic-check"/></svg></span></span>
+    </button>
+    <button class="row sw-row" id="rowHaptics" role="switch" aria-checked="true" aria-describedby="hapSum">
+      <span class="row-text">
+        <span class="row-title">Haptic feedback</span>
+        <span class="row-sum" id="hapSum">Recieve vibration feedback to gestures and touch.</span>
+      </span>
+      <span class="switch" aria-hidden="true"><span class="thumb"><svg class="i" viewBox="0 0 24 24"><use href="#ic-check"/></svg></span></span>
+    </button>
+  </div>
+
+  <h2 class="small-title">Return to stock</h2>
+  <div class="group">
+    <div class="row block slider-row">
+      <div class="row-text">
+        <span class="row-title"><span id="edLbl">Return-to-stock delay</span><span class="row-value" id="edVal" aria-hidden="true">5 s</span></span>
+        <span class="row-sum" id="edSum">How long performance profiles last after you exit a boosted app.</span>
+      </div>
+      <div class="slider" id="edSlider" style="--p:0.083">
+        <div class="s-track"><div class="s-fill"></div><div class="s-rest"></div><div class="s-stop"></div></div>
+        <div class="s-thumb"></div>
+        <input type="range" id="ed" min="0" max="60" step="1" value="5" aria-labelledby="edLbl" aria-describedby="edSum">
+      </div>
+    </div>
+    <div class="row block slider-row">
+      <div class="row-text">
+        <span class="row-title"><span id="piLbl">Check interval</span><span class="row-value" id="piVal" aria-hidden="true">2 s</span></span>
+        <span class="row-sum" id="piSum">How often the watcher checks if your boosted apps are running.</span>
+      </div>
+      <div class="slider" id="piSlider" style="--p:0.111">
+        <div class="s-track"><div class="s-fill"></div><div class="s-rest"></div><div class="s-stop"></div></div>
+        <div class="s-thumb"></div>
+        <input type="range" id="pi" min="1" max="10" step="1" value="2" aria-labelledby="piLbl" aria-describedby="piSum">
+      </div>
+    </div>
+  </div>
+
+  <h2 class="small-title">Troubleshooting</h2>
+  <div class="group">
+    <button class="row arrow" id="rowLogs">
+      <span class="row-lead" aria-hidden="true"><svg class="i" viewBox="0 0 24 24"><use href="#ic-doc"/></svg></span>
+      <span class="row-text">
+        <span class="row-title">Save logs</span>
+        <span class="row-sum">Save logs to Android/yc/uperf. Useful for reporting problems to the developer.</span>
+      </span>
+      <svg class="i chev" viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-chev"/></svg>
+    </button>
+    <button class="row arrow" id="rowRestart">
+      <span class="row-lead" aria-hidden="true"><svg class="i" viewBox="0 0 24 24"><use href="#ic-restart"/></svg></span>
+      <span class="row-text">
+        <span class="row-title">Restart watcher</span>
+        <span class="row-sum">Restarts the watcher service that detects your apps. Use this if your apps aren't getting detected.</span>
+      </span>
+      <svg class="i chev" viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-chev"/></svg>
+    </button>
+    <button class="row arrow" id="rowReset">
+      <span class="row-lead" aria-hidden="true"><svg class="i" viewBox="0 0 24 24"><use href="#ic-undo"/></svg></span>
+      <span class="row-text">
+        <span class="row-title">Reset module settings</span>
+        <span class="row-sum">Resets all module configuration settings to the default ones.</span>
+      </span>
+      <svg class="i chev" viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-chev"/></svg>
+    </button>
+  </div>
+  <h2 class="small-title">Information</h2>
+  <dl class="group facts" id="facts" aria-label="Status"></dl>
+
+  <h2 class="small-title">About</h2>
+  <div class="group">
+    <button class="row arrow" id="rowLicenses">
+      <span class="row-lead" aria-hidden="true"><svg class="i" viewBox="0 0 24 24"><use href="#ic-scale"/></svg></span>
+      <span class="row-text">
+        <span class="row-title">Open source licenses</span>
+        <span class="row-sum">uperf, Uperf Game Turbo, Miuix, BusyBox. Opens their pages on GitHub</span>
+      </span>
+      <svg class="i chev" viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-chev"/></svg>
+    </button>
+    <button class="row arrow" id="rowVersion">
+      <span class="row-lead" aria-hidden="true"><svg class="i" viewBox="0 0 24 24"><use href="#ic-info"/></svg></span>
+      <span class="row-text">
+        <span class="row-title">Version</span>
+        <span class="row-sum" id="aboutVer">…</span>
+      </span>
+      <svg class="i chev" viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-chev"/></svg>
+    </button>
+  </div>
+
+  <h2 class="small-title">Contact</h2>
+  <div class="group">
+    <button class="row arrow" id="rowTelegram">
+      <span class="row-lead" aria-hidden="true"><svg class="i" viewBox="0 0 24 24"><use href="#ic-telegram"/></svg></span>
+      <span class="row-text">
+        <span class="row-title">Telegram</span>
+        <span class="row-sum">t.me/DonkeyKongG3me</span>
+      </span>
+      <svg class="i chev" viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-chev"/></svg>
+    </button>
+    <button class="row arrow" id="rowDiscord">
+      <span class="row-lead" aria-hidden="true"><svg class="i" viewBox="0 0 24 24"><use href="#ic-discord"/></svg></span>
+      <span class="row-text">
+        <span class="row-title">Discord</span>
+        <span class="row-sum handle">donkeykong69</span>
+      </span>
+      <svg class="i chev" viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-chev"/></svg>
+    </button>
+  </div>
+  <div class="nav-spacer"></div>
+</main>
+
+<main class="screen sub" id="scrApp" aria-labelledby="appTitle" hidden>
+  <div class="topbar solid" id="appBar">
+    <button class="icon-btn back-btn" aria-label="Back">
+      <svg class="i" viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-back"/></svg>
+    </button>
+    <span class="topbar-title" id="appBarTitle" aria-hidden="true"></span>
+  </div>
+  <header class="app-head">
+    <span class="app-icon" id="appIcon" aria-hidden="true"></span>
+    <div class="app-names">
+      <h1 class="app-title" id="appTitle"></h1>
+      <p class="app-pkg" id="appPkg"></p>
+    </div>
+  </header>
+
+  <button class="mod-pill" id="modPill" aria-label="Activate the module from Settings to change boost modes. Open Settings" hidden>
+    <svg class="i" viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-warn"/></svg>
+    <span class="mod-pill-text">The module is off. Activate it in settings to use the boost modes.</span>
+    <svg class="i chev" viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-chev"/></svg>
+  </button>
+  <h2 class="small-title" id="profLbl">Boost mode</h2>
+  <div class="group" role="radiogroup" aria-labelledby="profLbl" id="presetList"></div>
+
+  <h2 class="small-title" id="extraLbl">Extra boost</h2>
+  <div class="group" id="extraGroup">
+    <button class="row sw-row" id="rowTouch" role="switch" aria-checked="false" aria-describedby="tSum">
+      <span class="row-text">
+        <span class="row-title">Boost touch response</span>
+        <span class="row-sum" id="tSum"></span>
+      </span>
+      <span class="switch" aria-hidden="true"><span class="thumb"><svg class="i" viewBox="0 0 24 24"><use href="#ic-check"/></svg></span></span>
+    </button>
+    <button class="row sw-row" id="rowThermal" role="switch" aria-checked="false" aria-describedby="hSum">
+      <span class="row-text">
+        <span class="row-title">Disable thermal limits</span>
+        <span class="row-sum" id="hSum"></span>
+      </span>
+      <span class="switch" aria-hidden="true"><span class="thumb"><svg class="i" viewBox="0 0 24 24"><use href="#ic-check"/></svg></span></span>
+    </button>
+  </div>
+  <p class="footnote">Changes apply instantly, no need to reboot.</p>
+</main>
+
+<main class="screen sub" id="scrLicenses" aria-labelledby="licTitle" hidden>
+  <div class="topbar solid" id="licBar">
+    <button class="icon-btn back-btn" aria-label="Back">
+      <svg class="i" viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-back"/></svg>
+    </button>
+    <span class="topbar-title" aria-hidden="true">Open Source Licenses</span>
+  </div>
+  <header class="page-head sub-head">
+    <h1 class="large-title one-line" id="licTitle">Open Source Licenses</h1>
+  </header>
+  <div id="licList"></div>
+  <p class="footnote">Tap a project page to open it in your browser</p>
+  <div class="nav-spacer short"></div>
+</main>
+
+<nav class="pillnav glider" id="pillnav" aria-label="Main">
+  <span class="ind" aria-hidden="true"></span>
+  <button class="nav-item" id="navHome" data-val="home" aria-label="Boost apps" aria-current="page">
+    <svg class="i nav-off" viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-rocket"/></svg>
+    <svg class="i nav-on" viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-rocket-fill"/></svg>
+  </button>
+  <button class="nav-item" id="navSettings" data-val="settings" aria-label="Settings">
+    <svg class="i nav-off" viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-gear"/></svg>
+    <svg class="i nav-on" viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-gear-fill"/></svg>
+  </button>
+</nav>
+
+<div class="scrim" id="dlg" hidden>
+  <div class="dialog" role="alertdialog" aria-modal="true" aria-labelledby="dlgTitle" aria-describedby="dlgBody">
+    <span class="dlg-grip" aria-hidden="true"></span>
+    <span class="dlg-icon" id="dlgIcon" aria-hidden="true" hidden><svg class="i" viewBox="0 0 24 24"><use href="#ic-warn"/></svg></span>
+    <h2 class="dlg-title" id="dlgTitle"></h2>
+    <div class="dlg-body" id="dlgBody"></div>
+    <div class="dlg-extra" id="dlgExtra"></div>
+    <label class="check" id="dlgCheck" hidden>
+      <input type="checkbox" id="dlgCheckBox">
+      <span class="box" aria-hidden="true"><svg class="i" viewBox="0 0 24 24"><use href="#ic-check"/></svg></span>
+      <span id="dlgCheckText"></span>
+    </label>
+    <div class="dlg-actions" id="dlgActions"></div>
+  </div>
+</div>
+<div class="scrim" id="busy" hidden>
+  <div class="dialog busy" role="alertdialog" aria-modal="true" aria-labelledby="busyTitle" aria-describedby="busyBody" aria-busy="true">
+    <span class="spinner big" aria-hidden="true"></span>
+    <h2 class="dlg-title" id="busyTitle">Saving logs…</h2>
+    <p class="dlg-body" id="busyBody"></p>
+  </div>
+</div>
+<div class="swipe-hint" id="swipeHint" aria-hidden="true" hidden>
+  <svg class="i" viewBox="0 0 24 24"><path d="M13 7l5 5-5 5M18 12H5"/></svg>
+  <span>Swipe right to go back</span>
+</div>
+<div class="snackbar" id="snack" role="status" aria-live="polite" hidden>
+  <span class="snack-text" id="snackText"></span>
+  <button class="snack-action" id="snackAction" hidden></button>
+</div>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="ic-rocket" viewBox="0 0 24 24">
+      <path d="M12 2.5c3 2.4 4.6 5.9 4.6 9.9v3.8H7.4v-3.8c0-4 1.6-7.5 4.6-9.9z"/>
+      <circle cx="12" cy="9.8" r="1.9"/>
+      <path d="M7.4 12.6 4.6 15.4v3.4l2.8-1.5M16.6 12.6l2.8 2.8v3.4l-2.8-1.5"/>
+      <path d="M10.1 18.6c0 1.6.8 2.5 1.9 3.1 1.1-.6 1.9-1.5 1.9-3.1"/>
+    </symbol>
+    <symbol id="ic-rocket-fill" viewBox="0 0 24 24">
+      <path fill="currentColor" fill-rule="evenodd" d="M12 2.5c3 2.4 4.6 5.9 4.6 9.9v3.8H7.4v-3.8c0-4 1.6-7.5 4.6-9.9zM12 7.9a1.9 1.9 0 1 0 0 3.8 1.9 1.9 0 1 0 0-3.8z"/>
+      <path fill="currentColor" d="M7.4 12.6 4.6 15.4v3.4l2.8-1.5zM16.6 12.6l2.8 2.8v3.4l-2.8-1.5z"/>
+      <path d="M10.1 18.6c0 1.6.8 2.5 1.9 3.1 1.1-.6 1.9-1.5 1.9-3.1"/>
+    </symbol>
+    <symbol id="ic-gear" viewBox="0 0 24 24">
+      <path d="M9.98 4.47 10.23 1.95h3.54l.25 2.52 1.88.78 1.95-1.61 2.51 2.51-1.61 1.95.78 1.88 2.52.25v3.54l-2.52.25-.78 1.88 1.61 1.95-2.51 2.51-1.95-1.61-1.88.78-.25 2.52h-3.54l-.25-2.52-1.88-.78-1.95 1.61-2.51-2.51 1.61-1.95-.78-1.88-2.52-.25v-3.54l2.52-.25.78-1.88-1.61-1.95 2.51-2.51 1.95 1.61z"/>
+      <circle cx="12" cy="12" r="3.2"/>
+    </symbol>
+    <symbol id="ic-gear-fill" viewBox="0 0 24 24">
+      <path fill="currentColor" fill-rule="evenodd" d="M9.98 4.47 10.23 1.95h3.54l.25 2.52 1.88.78 1.95-1.61 2.51 2.51-1.61 1.95.78 1.88 2.52.25v3.54l-2.52.25-.78 1.88 1.61 1.95-2.51 2.51-1.95-1.61-1.88.78-.25 2.52h-3.54l-.25-2.52-1.88-.78-1.95 1.61-2.51-2.51 1.61-1.95-.78-1.88-2.52-.25v-3.54l2.52-.25.78-1.88-1.61-1.95 2.51-2.51 1.95 1.61zM12 8.8a3.2 3.2 0 1 0 0 6.4 3.2 3.2 0 1 0 0-6.4z"/>
+    </symbol>
+    <symbol id="ic-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6"/><path d="m15 15 5 5"/></symbol>
+    <symbol id="ic-close" viewBox="0 0 24 24"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/></symbol>
+    <symbol id="ic-chev" viewBox="0 0 24 24"><path d="m9.5 6 6 6-6 6"/></symbol>
+    <symbol id="ic-back" viewBox="0 0 24 24"><path d="M19.5 12h-15M10.5 6l-6 6 6 6"/></symbol>
+    <symbol id="ic-check" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"/></symbol>
+    <symbol id="ic-sweep" viewBox="0 0 24 24"><path d="M4 7h16M9.5 7V4.5h5V7M6.5 7l1 13h9l1-13M10.5 11v5.5M13.5 11v5.5"/></symbol>
+    <symbol id="ic-doc" viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M8.5 13h7M8.5 17h5"/></symbol>
+    <symbol id="ic-restart" viewBox="0 0 24 24"><path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3"/><path d="M19.5 4v4.5H15"/></symbol>
+    <symbol id="ic-undo" viewBox="0 0 24 24"><path d="M9 7 4.5 11.5 9 16"/><path d="M4.5 11.5h10a5 5 0 0 1 0 10H12"/></symbol>
+    <symbol id="ic-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.5M12 7.8v.2"/></symbol>
+    <symbol id="ic-scale" viewBox="0 0 24 24"><path d="M12 4v16M8 20h8M5 7h14M12 4.5l-7 2.5M12 4.5l7 2.5"/><path d="M5 7 2.5 13a2.6 2.6 0 0 0 5 0zM19 7l-2.5 6a2.6 2.6 0 0 0 5 0z"/></symbol>
+    <symbol id="ic-warn" viewBox="0 0 24 24"><path d="M12 3.5 2.5 20h19z"/><path d="M12 10v4.5M12 17.3v.2"/></symbol>
+    <symbol id="ic-flame" viewBox="0 0 24 24"><path d="M12 21.5c-3.9 0-6.5-2.6-6.5-6.2 0-3.4 2.5-5.3 3.6-8.3.6 1.6 1.4 2.6 2.4 3.1.3-2.7 1.5-5 3.7-6.6-.2 3 1 4.9 2.3 6.6 1.1 1.4 1 3.1 1 4.9 0 3.7-2.6 6.5-6.5 6.5z"/></symbol>
+    <symbol id="ic-sort" viewBox="0 0 24 24"><path d="M4 7h11M4 12h8M4 17h5M18 5v14M15 16l3 3 3-3"/></symbol>
+    <symbol id="ic-open" viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9"/><path d="M18 14v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4"/></symbol>
+    <symbol id="ic-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="ic-telegram" viewBox="0 0 24 24">
+      <path d="M3.2 12 20.8 5.2 17.8 19.2 10.9 14.5 7.7 13.4Z"/>
+      <path d="M16.1 8.4 10.9 14.5"/>
+    </symbol>
+    <symbol id="ic-discord" viewBox="0 0 24 24">
+      <g transform="translate(12 12.2) scale(1.16) translate(-12 -12.2)">
+        <path vector-effect="non-scaling-stroke" d="M6.8 7C8.3 6.3 9.1 6.2 9.8 6.3L10.2 7C11.2 6.8 12.8 6.8 13.8 7L14.2 6.3C14.9 6.2 15.7 6.3 17.2 7 18.6 9 19.5 11.2 19.6 13.5c.1 1.1.1 1.7 0 2.3-1.1 1.7-2.7 2.4-4.4 2.2L14.4 16.8c.8-.2 1.6-.6 2.2-1.2-1.7.8-3.3 1-4.6 1s-2.9-.2-4.6-1c.6.6 1.4 1 2.2 1.2L8.8 18C7.1 18.2 5.5 17.5 4.4 15.8 4.3 15.2 4.3 14.6 4.4 13.5 4.5 11.2 5.4 9 6.8 7Z"/>
+        <ellipse vector-effect="non-scaling-stroke" cx="9.5" cy="12.4" rx="1.3" ry="1.6"/>
+        <ellipse vector-effect="non-scaling-stroke" cx="14.5" cy="12.4" rx="1.3" ry="1.6"/>
+      </g>
+    </symbol>
+  </defs>
+</svg>
+
+<script src="app.js"></script>
+</body>
+</html>

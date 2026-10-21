@@ -78,15 +78,15 @@
         "cpusetBg": "/dev/cpuset/background/cpus",
         "cpusetSysBg": "/dev/cpuset/system-background/cpus",
         "cpusetRe": "/dev/cpuset/restricted/cpus",
-        "cpuMax":"/sys/devices/platform/exynos-ufcc/ufc/cpufreq_max_limit",
-        "cpuMin":"/sys/devices/platform/exynos-ufcc/ufc/cpufreq_min_limit",
-        "gpuMin":"/sys/kernel/gpu/gpu_min_clock",
-        "gpuMax":"/sys/kernel/gpu/gpu_max_clock",
-        "powerLimit":"/sys/devices/platform/xperf/prof/power_limit",
-        "sca7Min":"/sys/devices/system/cpu/cpufreq/policy7/scaling_min_freq",
-        "sca7Max":"/sys/devices/system/cpu/cpufreq/policy7/scaling_max_freq",
-        "sca4Max":"/sys/devices/system/cpu/cpufreq/policy4/scaling_max_freq",
-        "sca4Min":"/sys/devices/system/cpu/cpufreq/policy4/scaling_min_freq"
+        "cpuMax": "/sys/devices/platform/exynos-ufcc/ufc/cpufreq_max_limit",
+        "cpuMin": "/sys/devices/platform/exynos-ufcc/ufc/cpufreq_min_limit",
+        "gpuMin": "/sys/kernel/gpu/gpu_min_clock",
+        "gpuMax": "/sys/kernel/gpu/gpu_max_clock",
+        "powerLimit": "/sys/devices/platform/xperf/prof/power_limit",
+        "sca7Min": "/sys/devices/system/cpu/cpufreq/policy7/scaling_min_freq",
+        "sca7Max": "/sys/devices/system/cpu/cpufreq/policy7/scaling_max_freq",
+        "sca4Max": "/sys/devices/system/cpu/cpufreq/policy4/scaling_max_freq",
+        "sca4Min": "/sys/devices/system/cpu/cpufreq/policy4/scaling_min_freq"
       }
     },
     "sched": {
@@ -535,43 +535,44 @@
     },
     "powersave": {
       "*": {
-        "cpu.latencyTime": 0.8, 
-        "cpu.slowLimitPower": 1.0, 
-        "cpu.fastLimitPower": 1.0, 
-        "cpu.fastLimitCapacity": 1.0, 
+        "cpu.latencyTime": 0.8,
+        "cpu.slowLimitPower": 0.75,
+        "cpu.fastLimitPower": 1.0,
+        "cpu.fastLimitCapacity": 1.0,
         "sysfs.powerLimit": "6000",
-        "cpu.margin": 0.1
-      }, 
+        "cpu.margin": 0.1,
+        "cpu.limitEfficiency": true
+      },
       "idle": {
-        "cpu.baseSampleTime": 0.04, 
-        "cpu.baseSlackTime": 0.08, 
-        "cpu.predictThd": 1.0, 
-        "cpu.limitEfficiency": true, 
+        "cpu.baseSampleTime": 0.04,
+        "cpu.baseSlackTime": 0.08,
+        "cpu.predictThd": 1.0,
+        "cpu.limitEfficiency": true,
         "sched.scene": "idle"
-      }, 
+      },
       "touch": {
-        "cpu.baseSampleTime": 0.04, 
+        "cpu.baseSampleTime": 0.04,
         "sched.scene": "touch"
-      }, 
+      },
       "trigger": {
-        "cpu.latencyTime": 0.0, 
-        "cpu.margin": 0.1, 
+        "cpu.latencyTime": 0.0,
+        "cpu.margin": 0.1,
         "sched.scene": "touch"
-      }, 
+      },
       "gesture": {
-        "cpu.margin": 0.1, 
+        "cpu.margin": 0.1,
         "sched.scene": "touch"
-      }, 
+      },
       "junk": {
-        "cpu.burst": 0.1, 
+        "cpu.burst": 0.1,
         "sched.scene": "touch"
-      }, 
+      },
       "switch": {
-        "cpu.latencyTime": 0.0, 
-        "cpu.slowLimitPower": 1.5, 
-        "cpu.fastLimitPower": 2.5, 
-        "cpu.fastLimitRecoverScale": 0.1, 
-        "cpu.margin": 0.2, 
+        "cpu.latencyTime": 0.0,
+        "cpu.slowLimitPower": 1.5,
+        "cpu.fastLimitPower": 2.5,
+        "cpu.fastLimitRecoverScale": 0.1,
+        "cpu.margin": 0.2,
         "sched.scene": "boost"
       }
     },

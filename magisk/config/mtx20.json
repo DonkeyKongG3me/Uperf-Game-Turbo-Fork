@@ -1,6 +1,6 @@
 {
   "meta": {
-    "name": "mt x20m(mt6797)",
+    "name": "mt x20/x23",
     "author": "yc@coolapk  ❤️吟惋兮❤"
   },
   "modules": {
@@ -43,13 +43,22 @@
           "typicalPower": 0.4,
           "typicalFreq": 1.4,
           "sweetFreq": 1.2,
-          "plainFreq": 1.0,
+          "plainFreq": 1.1,
           "freeFreq": 0.6
         },
         {
           "efficiency": 110,
           "nr": 4,
           "typicalPower": 0.4,
+          "typicalFreq": 1.8,
+          "sweetFreq": 1.6,
+          "plainFreq": 1.4,
+          "freeFreq": 0.6
+        },
+        {
+          "efficiency": 200,
+          "nr": 2,
+          "typicalPower": 1,
           "typicalFreq": 2.1,
           "sweetFreq": 1.8,
           "plainFreq": 1.4,
@@ -86,7 +95,9 @@
           4,
           5,
           6,
-          7
+          7,
+          8,
+          9
         ],
         "c0": [
           0,
@@ -97,10 +108,12 @@
         "c1": [
           4,
           5,
-          6
+          6,
+          7
         ],
         "c2": [
-          7
+          7,
+          8
         ]
       },
       "affinity": {
@@ -439,7 +452,7 @@
       "fastLimitCapacity": 10.0,
       "fastLimitRecoverScale": 0.3,
       "predictThd": 0.3,
-      "margin": 0.25,
+      "margin": 0.35,
       "burst": 0.0,
       "guideCap": true,
       "limitEfficiency": false
@@ -449,11 +462,11 @@
       "llccddrMin4": "762",
       "llccddrRC0": "400",
       "llccddrRC4": "400",
-      "cpusetTa": "0-7",
-      "cpusetFg": "0-2,4-7",
-      "cpusetBg": "0-2",
-      "cpusetSysBg": "0-2",
-      "cpusetRe": "0-6"
+      "cpusetTa": "0-9",
+      "cpusetFg": "0-7",
+      "cpusetBg": "0-7",
+      "cpusetSysBg": "0-7",
+      "cpusetRe": "0-7"
     },
     "sched": {
       "scene": "idle"
@@ -462,11 +475,11 @@
   "presets": {
     "balance": {
       "*": {
-        "cpu.latencyTime": 0.2,
+        "cpu.latencyTime": 0.1,
         "cpu.slowLimitPower": 2.0,
-        "cpu.fastLimitPower": 2.0,
+        "cpu.fastLimitPower": 4.0,
         "cpu.fastLimitCapacity": 16.0,
-        "cpu.margin": 0.2
+        "cpu.margin": 0.35
       },
       "idle": {
         "cpu.baseSampleTime": 0.04,
@@ -504,10 +517,11 @@
     "powersave": {
       "*": {
         "cpu.latencyTime": 0.4,
-        "cpu.slowLimitPower": 1.0,
+        "cpu.slowLimitPower": 0.75,
         "cpu.fastLimitPower": 1.0,
         "cpu.fastLimitCapacity": 4.0,
-        "cpu.margin": 0.1
+        "cpu.margin": 0.1,
+        "cpu.limitEfficiency": true
       },
       "idle": {
         "cpu.baseSampleTime": 0.04,
