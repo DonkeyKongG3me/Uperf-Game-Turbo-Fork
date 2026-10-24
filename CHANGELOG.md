@@ -4,8 +4,6 @@
 
 - Initial release.
 
-## v1.1
-
 ### Changelog V1.1:
 ___
 ### Major changes:
