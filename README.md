@@ -4,7 +4,7 @@
 
 # Uperf Game Turbo Fork
 
-Revolutionary performance module for Android. Supports over ~120 SOC's.
+Revolutionary performance module for Android. Supports ~120 SOC's.
 
 [![Release](https://img.shields.io/github/v/release/DonkeyKongG3me/Uperf-Game-Turbo-Fork?style=flat-square)](https://github.com/DonkeyKongG3me/Uperf-Game-Turbo-Fork/releases/latest)
 [![Downloads](https://img.shields.io/github/downloads/DonkeyKongG3me/Uperf-Game-Turbo-Fork/total?style=flat-square)](https://github.com/DonkeyKongG3me/Uperf-Game-Turbo-Fork/releases)
