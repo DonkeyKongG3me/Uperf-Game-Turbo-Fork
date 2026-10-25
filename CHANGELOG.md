@@ -1,11 +1,5 @@
-# Changelog
+# Changelog V1.1
 
-## v1.0
-
-- Initial release.
-
-### Changelog V1.1:
-___
 ### Major changes:
 
 - Reworked "Boost touch response" feature to give the same effect for all profiles.
