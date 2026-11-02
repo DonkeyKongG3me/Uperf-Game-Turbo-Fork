@@ -490,20 +490,26 @@
       },
       "touch": {
         "cpu.baseSampleTime": 0.04,
-        "sched.scene": "touch"
+        "sched.scene": "touch",
+        "cpu.burst": 1.0,
+        "cpu.latencyTime": 0.0
       },
       "trigger": {
         "cpu.latencyTime": 0.0,
         "cpu.margin": 0.4,
-        "sched.scene": "touch"
+        "sched.scene": "touch",
+        "cpu.burst": 1.0
       },
       "gesture": {
         "cpu.margin": 0.6,
-        "sched.scene": "touch"
+        "sched.scene": "touch",
+        "cpu.burst": 1.0,
+        "cpu.latencyTime": 0.0
       },
       "junk": {
-        "cpu.burst": 0.7,
-        "sched.scene": "touch"
+        "cpu.burst": 1.0,
+        "sched.scene": "touch",
+        "cpu.latencyTime": 0.0
       },
       "switch": {
         "cpu.latencyTime": 0.0,
@@ -532,20 +538,28 @@
       },
       "touch": {
         "cpu.baseSampleTime": 0.04,
-        "sched.scene": "touch"
+        "sched.scene": "touch",
+        "cpu.margin": 0.35,
+        "cpu.burst": 1.0,
+        "cpu.latencyTime": 0.0
       },
       "trigger": {
         "cpu.latencyTime": 0.0,
-        "cpu.margin": 0.3,
-        "sched.scene": "touch"
+        "cpu.margin": 0.4,
+        "sched.scene": "touch",
+        "cpu.burst": 1.0
       },
       "gesture": {
         "cpu.margin": 0.6,
-        "sched.scene": "touch"
+        "sched.scene": "touch",
+        "cpu.burst": 1.0,
+        "cpu.latencyTime": 0.0
       },
       "junk": {
-        "cpu.burst": 0.6,
-        "sched.scene": "touch"
+        "cpu.burst": 1.0,
+        "sched.scene": "touch",
+        "cpu.margin": 0.35,
+        "cpu.latencyTime": 0.0
       },
       "switch": {
         "cpu.latencyTime": 0.0,
@@ -575,10 +589,12 @@
         "sched.scene": "touch"
       },
       "trigger": {
-        "sched.scene": "touch"
+        "sched.scene": "touch",
+        "cpu.margin": 0.4
       },
       "gesture": {
-        "sched.scene": "touch"
+        "sched.scene": "touch",
+        "cpu.margin": 0.6
       },
       "junk": {
         "sched.scene": "touch"

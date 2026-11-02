@@ -1,7 +1,7 @@
 id=uperf
 name=Uperf Game Turbo Fork
-version=1.0
-versionCode=100000
+version=1.2
+versionCode=120000
 author=DonkeyKongG3me
-description=This module lets you set performance profiles to individual apps using Uperf. Supports over 120+ SoCs. Click Action to select which apps use the Uperf game booster.
+description=This module lets you set performance profiles to individual apps using Uperf. Supports over 119 SoCs. Click Action to select which apps use the Uperf game booster.
 updateJson=https://raw.githubusercontent.com/DonkeyKongG3me/Uperf-Game-Turbo-Fork/main/update.json

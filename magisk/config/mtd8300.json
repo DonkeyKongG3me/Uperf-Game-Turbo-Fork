@@ -474,21 +474,29 @@
         "sched.scene": "idle"
       },
       "touch": {
-        "sched.scene": "touch"
+        "sched.scene": "touch",
+        "cpu.margin": 0.53,
+        "cpu.burst": 0.29,
+        "cpu.latencyTime": 0
       },
       "trigger": {
-        "cpu.margin": 0.3,
-        "sched.scene": "touch"
+        "cpu.margin": 0.65,
+        "sched.scene": "touch",
+        "cpu.burst": 0.29,
+        "cpu.latencyTime": 0
       },
       "gesture": {
-        "cpu.margin": 0.4,
-        "sched.scene": "touch"
+        "cpu.margin": 0.5,
+        "sched.scene": "touch",
+        "cpu.burst": 0.29,
+        "cpu.latencyTime": 0
       },
       "junk": {
-        "cpu.burst": 0.5,
+        "cpu.burst": 0.7,
         "sched.scene": "touch",
         "cpu.limitEfficiency": true,
-        "sysfs.ddrMin": "5500000000"
+        "sysfs.ddrMin": "5500000000",
+        "cpu.latencyTime": 0
       },
       "switch": {
         "cpu.latencyTime": 0,
@@ -519,20 +527,28 @@
       },
       "touch": {
         "cpu.baseSampleTime": 0.04,
-        "sched.scene": "touch"
+        "sched.scene": "touch",
+        "cpu.margin": 0.53,
+        "cpu.burst": 0.29,
+        "cpu.latencyTime": 0
       },
       "trigger": {
         "cpu.latencyTime": 0,
-        "cpu.margin": 0.1,
-        "sched.scene": "touch"
+        "cpu.margin": 0.65,
+        "sched.scene": "touch",
+        "cpu.burst": 0.29
       },
       "gesture": {
-        "cpu.margin": 0.1,
-        "sched.scene": "touch"
+        "cpu.margin": 0.5,
+        "sched.scene": "touch",
+        "cpu.burst": 0.29,
+        "cpu.latencyTime": 0
       },
       "junk": {
-        "cpu.burst": 0.1,
-        "sched.scene": "touch"
+        "cpu.burst": 0.7,
+        "sched.scene": "touch",
+        "cpu.margin": 0.3,
+        "cpu.latencyTime": 0
       },
       "switch": {
         "cpu.latencyTime": 0,
@@ -573,7 +589,8 @@
       },
       "junk": {
         "cpu.burst": 0.7,
-        "sched.scene": "touch"
+        "sched.scene": "touch",
+        "cpu.margin": 0.3
       },
       "switch": {
         "cpu.burst": 0.7,

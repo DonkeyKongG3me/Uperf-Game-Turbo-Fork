@@ -1,6 +1,4 @@
 #!/system/bin/sh
-
-# "pid<TAB>argv<TAB>comm" for every process
 proc_table() {
     local d a c
     for d in /proc/[0-9]*; do
@@ -11,29 +9,22 @@ proc_table() {
         echo "${d#/proc/}	$a	$c"
     done
 }
-
 pids_by_regex() {
     echo "$PROC_TABLE" | grep -iE "$1" | cut -f1
 }
-
 home_package() {
     cmd package resolve-activity --brief -a android.intent.action.MAIN -c android.intent.category.HOME 2>/dev/null |
         tail -n1 | cut -d/ -f1
 }
-
-
 want_thermal() {
     [ "$ST_MODE" = "baseline" ] || [ "$UNLOCK_THERMAL" = "1" ]
 }
-
 want_perf() {
     [ "$ST_MODE" = "baseline" ] || [ "$TIER" = "perf" ]
 }
-
 want_mid() {
     [ "$ST_MODE" = "baseline" ] || [ "$TIER" = "perf" ] || [ "$TIER" = "mid" ]
 }
-
 set_tier() {
     case "$1" in
     performance | fast) TIER="perf" ;;
@@ -41,12 +32,12 @@ set_tier() {
     *) TIER="eco" ;;
     esac
 }
-
 want_touch_override() {
     [ "$ST_MODE" = "baseline" ] || [ "$UPERF_TOUCH" = "1" ]
 }
-
-
+want_batoc() {
+    [ "$ST_MODE" = "baseline" ] || [ "$UNLOCK_BATOC" = "1" ]
+}
 set_cpufreq_min() {
     local kv
     lock_val "$1" /sys/module/msm_performance/parameters/cpu_min_freq
@@ -54,7 +45,6 @@ set_cpufreq_min() {
         lock_val_k cpumin "${kv#*:}" "/sys/devices/system/cpu/cpu${kv%:*}/cpufreq/scaling_min_freq"
     done
 }
-
 set_cpufreq_max() {
     local kv
     lock_val "$1" /sys/module/msm_performance/parameters/cpu_max_freq
@@ -62,14 +52,12 @@ set_cpufreq_max() {
         lock_val_k cpumax "${kv#*:}" "/sys/devices/system/cpu/cpu${kv%:*}/cpufreq/scaling_max_freq"
     done
 }
-
 set_corectl_param() {
     local kv
     for kv in $2; do
         lock_val "${kv#*:}" "/sys/devices/system/cpu/cpu${kv%:*}/core_ctl/$1"
     done
 }
-
 record_uperf_knobs() {
     local p
     st_record_only raw "/sys/devices/system/cpu/cpufreq/policy*/scaling_governor"
@@ -87,8 +75,6 @@ record_uperf_knobs() {
     done
     st_record_only raw "/proc/sys/fs/inotify/max_queued_events /proc/sys/fs/inotify/max_user_watches /proc/sys/fs/inotify/max_user_instances"
 }
-
-
 unify_sched() {
     local d
     for d in /dev/stune/*/; do
@@ -103,7 +89,6 @@ unify_sched() {
         mask_val "0" "/proc/sys/$d/sched_force_lb_enable"
     done
 }
-
 unify_devfreq() {
     local df d
     want_perf || return 0
@@ -116,7 +101,6 @@ unify_devfreq() {
         lock_val "9999000000" "/sys/devices/system/cpu/bus_dcvs/$d/*/max_freq"
     done
 }
-
 unify_lpm() {
     local d
     want_perf || return 0
@@ -128,7 +112,6 @@ unify_lpm() {
         mask_val "2000000" "/proc/sys/$d/sched_busy_hyst_ns"
     done
 }
-
 disable_hotplug() {
     local i
     if want_thermal; then
@@ -138,20 +121,16 @@ disable_hotplug() {
     want_mid || return 0
     mutate "0" /sys/power/cpuhotplug/enabled
     mutate "0" /sys/devices/system/cpu/cpuhotplug/enabled
-
     lock_val "0" /sys/kernel/intelli_plug/intelli_plug_active
     lock_val "0" /sys/module/blu_plug/parameters/enabled
     lock_val "0" /sys/devices/virtual/misc/mako_hotplug_control/enabled
     lock_val "0" /sys/module/autosmp/parameters/enabled
     lock_val "0" /sys/kernel/zen_decision/enabled
-
     set_corectl_param "enable" "0:0 6:0 7:0"
-
     for i in 0 1 2 3 4 5 6 7 8 9; do
         lock_val_k online "1" "/sys/devices/system/cpu/cpu$i/online"
     done
 }
-
 disable_kernel_boost() {
     local i
     if want_touch_override; then
@@ -164,13 +143,10 @@ disable_kernel_boost() {
         lock_val "0" "/sys/kernel/cpu_input_boost/*"
         lock_val "0" "/sys/module/cpu_input_boost/parameters/*"
     fi
-
     lock_val "0" "/sys/module/msm_performance/parameters/*"
     lock_val "0" "/sys/kernel/msm_performance/parameters/*"
-
     set_cpufreq_min "0:0 1:0 2:0 3:0 4:0 5:0 6:0 7:0"
     set_cpufreq_max "0:9999000 1:9999000 2:9999000 3:9999000 4:9999000 5:9999000 6:9999000 7:9999000"
-
     if want_thermal; then
         lock_val_k ppmen "1" /proc/ppm/enabled
         for i in 0 1 2 3 4 5 6 7 8 9 10; do
@@ -190,45 +166,54 @@ disable_kernel_boost() {
         lock_val "9999000" "/sys/kernel/fpsgo/fbt/limit_*"
         lock_val "0" /sys/kernel/fpsgo/fbt/switch_idleprefer
     fi
-
     lock_val "N" "/sys/module/control_center/parameters/*"
     lock_val "0" /sys/module/aigov/parameters/enable
     lock_val "0" "/sys/module/houston/parameters/*"
     lock_val "0" /sys/module/opchain/parameters/chain_on
-
     lock_val "0" "/sys/module/dsboost/parameters/*"
     lock_val "0" "/sys/module/devfreq_boost/parameters/*"
 }
-
 disable_userspace_boost() {
     perm_val 0000 /dev/migt
     perm_val 0000 "/sys/module/migt/parameters/*"
 }
-
 disable_userspace_thermal() {
-    local i maxfreq
+    local i maxfreq d hot
     want_thermal || return 0
     for i in 0 2 4 6 7; do
         maxfreq="$(cat "/sys/devices/system/cpu/cpu$i/cpufreq/cpuinfo_max_freq" 2>/dev/null)"
         [ -n "$maxfreq" ] && [ "$maxfreq" -gt "0" ] &&
             lock_val_k perm "cpu$i $maxfreq" /sys/devices/virtual/thermal/thermal_message/cpu_limits
     done
+    case "$CHIP_FAMILY" in
+    pixel | exynos)
+        thermal_cdevs | while read -r d hot; do
+            if [ "$hot" = "1" ]; then
+                lock "$d/cur_state"
+            else
+                lock_val_k perm "0" "$d/cur_state"
+            fi
+        done
+        ;;
+    esac
+    [ "$CHIP_FAMILY" = "exynos" ] && lock_val_k perm "-1" /sys/power/cpufreq_max_limit
 }
-
+disable_battery_limit() {
+    want_batoc || return 0
+    lock_val_k batoc "stop 1" "/proc/mtk_batoc_throttling/battery_oc_protect_stop /sys/devices/platform/low-battery-throttling/low_battery_protect_stop"
+    lock_val "0" /sys/devices/virtual/pmic/mitigation/instruction/enable_sw_mitigation
+}
 mtk_once() {
     local i
     want_mid && lock_val "0" /sys/module/mtk_core_ctl/parameters/policy_enable
-
     if [ -d "/proc/gpufreqv2" ]; then
         if want_thermal; then
             lock_val_k aging "disable" /proc/gpufreqv2/aging_mode
-            lock_val_k batoc "stop 1" /proc/mtk_batoc_throttling/battery_oc_protect_stop
             for i in $(seq 0 10); do
                 lock_val_k gpulimit "$i 0 0" /proc/gpufreqv2/limit_table
             done
             lock_val_k gpulimit "1 1 1" /proc/gpufreqv2/limit_table
             lock_val_k gpulimit "3 1 1" /proc/gpufreqv2/limit_table
-
             lock_val "0" /sys/kernel/fpsgo/fbt/thrm_enable
             lock_val "300000" /sys/kernel/fpsgo/fbt/thrm_temp_th
         fi
@@ -256,14 +241,11 @@ mtk_once() {
             lock_val "0" /sys/kernel/eara_thermal/enable
             lock_val "0" /proc/wmt_tm/tx_thro
             lock_val "-1" /proc/wmt_tm/tx_thro_limit
-
             lock_val "0" /sys/kernel/fpsgo/fbt/thrm_enable
             lock_val "300000" /sys/kernel/fpsgo/fbt/thrm_temp_th
         fi
     fi
 }
-
-
 platform_special() {
     local i d df BUS_DIR MAX_FREQ MIN_PWRLVL n
     if [ "$IS_MTK" = "true" ]; then
@@ -286,11 +268,9 @@ platform_special() {
             mask_val "-1" /sys/kernel/fpsgo/fbt/thrm_limit_cpu
             mask_val "-1" /sys/kernel/fpsgo/fbt/thrm_sub_cpu
         fi
-
         if [ -d "/proc/gpufreqv2" ]; then
             if want_thermal; then
                 lock_val_k aging "disable" /proc/gpufreqv2/aging_mode
-                lock_val_k batoc "stop 1" /proc/mtk_batoc_throttling/battery_oc_protect_stop
                 for i in $(seq 0 10); do
                     lock_val_k gpulimit "$i 0 0" /proc/gpufreqv2/limit_table
                 done
@@ -341,7 +321,6 @@ platform_special() {
                 done
             done
         fi
-
         n="$(cat /sys/class/kgsl/kgsl-3d0/num_pwrlevels 2>/dev/null)"
         if [ -n "$n" ] && [ "$n" -gt 0 ]; then
             MIN_PWRLVL=$((n - 1))
@@ -366,17 +345,13 @@ platform_special() {
         mask_val "0" /sys/module/metis/parameters/vip_link_enable
         mask_val "0" /sys/module/perfmgr/parameters/perfmgr_enable
     fi
-
     want_mid && mask_val "0" /sys/module/cpufreq_bouncing/parameters/enable
     mask_val "0" /proc/task_info/task_sched_info/task_sched_info_enable
     mask_val "0" /proc/oplus_scheduler/sched_assist/sched_assist_enabled
 }
-
-
 miui_migt() {
     local migt glk
     [ -n "$(getprop ro.miui.ui.version.name)" ] || return 0
-
     migt=/sys/module/migt/parameters
     if [ -e $migt ]; then
         lock_val '0:0 1:0 2:0 3:0 4:0 5:0 6:0 7:0' $migt/migt_freq
@@ -396,7 +371,6 @@ miui_migt() {
         perm_val 000 /sys/module/migt
         perm_val 000 /sys/module/sched_walt/holders/migt/parameters
     fi
-
     glk=/proc/sys/glk
     if [ -d $glk ] && want_mid; then
         lock_val '1' $glk/glk_disable
@@ -405,42 +379,33 @@ miui_migt() {
         lock_val '30 30 30' $glk/game_lowspeed_load
         lock_val '80 80 80' $glk/game_hispeed_load
     fi
-
     migt=/proc/sys/migt
     if [ -d $migt ]; then
         lock_val '0' $migt/force_stask_tob
         lock_val '0' $migt/enable_pkg_monitor
         lock_val '0' $migt/boost_pid
     fi
-
     perm_val 000 /sys/class/misc/migt
     perm_val 000 /sys/module/sched_walt/holders/migt
 }
-
-
 UPERF_PIDS() {
     pidof uperf 2>/dev/null
 }
-
 uperf_start() {
     local i p t cfg
     lock_val "1048576" /proc/sys/fs/inotify/max_queued_events
     lock_val "1048576" /proc/sys/fs/inotify/max_user_watches
     lock_val "1024" /proc/sys/fs/inotify/max_user_instances
-
-    printf '%s\n' "# generated by geode daemon, edit geode.conf instead" "* $1" "- $1" >"$USER_PATH/perapp_powermode.txt"
+    printf '%s\n' "* $1" "- $1" >"$USER_PATH/perapp_powermode.txt"
     echo "$1" >"$USER_PATH/cur_powermode.txt"
-
     cfg="$USER_PATH/uperf.json"
     if [ "$UPERF_TOUCH" = "0" ]; then
         cfg="$STATE_DIR/uperf_notouch.json"
         awk '/"input"[ \t]*:/ { f = 1 } f && /"enable"/ { sub(/true/, "false"); f = 0 } { print }' \
             "$USER_PATH/uperf.json" >"$cfg" 2>/dev/null || cfg="$USER_PATH/uperf.json"
     fi
-
     mv -f "$USER_PATH/uperf_log.txt" "$USER_PATH/uperf_log.txt.bak" 2>/dev/null
     "$BIN_PATH/uperf" "$cfg" -o "$USER_PATH/uperf_log.txt" </dev/null >/dev/null 2>&1 &
-
     for i in 1 2 3 4 5 6 7 8 9 10; do
         [ -n "$(UPERF_PIDS)" ] && break
         sleep 0.2
@@ -453,15 +418,12 @@ uperf_start() {
     done
     [ -n "$(UPERF_PIDS)" ]
 }
-
 uperf_pause() {
     killall -STOP uperf 2>/dev/null
 }
-
 uperf_resume() {
     killall -CONT uperf 2>/dev/null
 }
-
 uperf_stop() {
     local i
     killall -CONT uperf 2>/dev/null
@@ -473,26 +435,21 @@ uperf_stop() {
     killall -9 uperf 2>/dev/null
     sleep 0.2
 }
-
-
 apply_game_tweaks() {
     [ -n "$IS_MTK" ] || IS_MTK="$(is_mtk)"
-
+    [ -n "$CHIP_FAMILY" ] || CHIP_FAMILY="$(chip_family)"
     disable_kernel_boost
     disable_hotplug
     unify_sched
     unify_devfreq
     unify_lpm
-
     disable_userspace_thermal
+    disable_battery_limit
     disable_userspace_boost
-
     [ "$IS_MTK" = "true" ] && mtk_once
-
     platform_special
     miui_migt
 }
-
 fix_cpu_governors() {
     local p g avail best want
     for p in /sys/devices/system/cpu/cpufreq/policy*; do
@@ -515,7 +472,6 @@ fix_cpu_governors() {
         echo "${p##*/}: $g -> $want"
     done
 }
-
 uperf_sched_enabled() {
     awk '/"sched"[ \t]*:/ { s = 1 } s && /"enable"/ { print; exit }' "$USER_PATH_RAW/uperf.json" 2>/dev/null | grep -q true
 }

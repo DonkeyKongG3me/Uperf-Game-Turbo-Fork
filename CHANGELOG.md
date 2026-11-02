@@ -1,25 +1,41 @@
-# Changelog V1.1
+# Changelog V1.2
 
-### Major changes:
+### 🚀 Major changes:
 
-- Reworked "Boost touch response" feature to give the same effect for all profiles.
+**🔋 New feature: "Spoof battery temperature"**
 
-- Added "Disable Battery Current Limit" as a standalone feature (Supports MediaTek and Tensor for now, more support on the way).
+• *Configure a **fake reported battery temperature** for boosted apps to reduce throttling. You can tweak this for each boosted app **individually.***
 
-- Rewritten the UI texts for descriptions, warnings and toggles across the entire module to be more accurate.
+**⚙️ New feature: "View System Apps"**
 
-- Fixed bugs causing installation failures on the Dimensity 1100, Snapdragon 650, Snapdragon 810 and Snapdragon 8s Gen 3.
+• *You can now view and apply performance profiles to **system apps as well.***
 
-- Fixed a bug that mapped the sdm7sg3.json to Snapdragon 7s Gen 4 devices.
+---
 
-- Dropped support for the Intel Atom since it didn't use an ARM64 infrastructure, which is required for this module.
+### 🎨 UI changes:
 
-### Minor changes:
+- Heavily **optimized the entire UI**, completely overhauled **animations** and made scrolling **much smoother.**
 
-- Version code now redirects to GitHub releases instead of copying text in Settings.
+- Improved **Navigation Bar** animations.
 
-- Added the Telegram releases and support groups in Settings.
+- Improved the search bar and added **search suggestions** to quickly find apps.
 
-- Updated the Liquid Glass animation physics for the Miuix navigation pill.
+- Improved **blur rendering** on both skins, especially miuix.
 
-- Small UI improvements.
+- Added **drop-down menus** for miuix and m3e.
+
+- Added a ***hold to delete*** feature to quickly remove boosted apps.
+
+- The module status header can be **disabled.** It's more **compact** than before.
+
+---
+
+### ✍️ Minor changes:
+
+- The module gets **com.android.permission.GET_INSTALLED_APPS** on boot to record and read your app list by default.
+
+- Rewrote the descriptions to be clearer.
+
+- Removed old legacy code.
+
+- Small bugfixes.

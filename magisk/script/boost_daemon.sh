@@ -1,5 +1,4 @@
 #!/system/bin/sh
-
 BASEDIR="$(dirname "$(readlink -f "$0")")"
 . "$BASEDIR/pathinfo.sh"
 . "$BASEDIR/libcommon.sh"
@@ -7,18 +6,19 @@ BASEDIR="$(dirname "$(readlink -f "$0")")"
 . "$BASEDIR/libstate.sh"
 . "$BASEDIR/libtweaks.sh"
 . "$BASEDIR/libconf.sh"
-
+. "$BASEDIR/libbattemp.sh"
 PIDFILE="$STATE_DIR/daemon.pid"
-
 APP_LIST=""
 TARGET_PKGS=""
 UNLOCK_THERMAL=0
+UNLOCK_BATOC=0
 UPERF_TOUCH=1
 SIG=""
 EXIT_DELAY=5
 POLL_IDLE=2
 PRESET="fast"
-
+BAT_TEMP=0
+BAT_TEMP_ON=""
 GPID=""
 GPKG=""
 GSKIP=0
@@ -26,38 +26,15 @@ PAUSED=0
 AWAY=0
 TICK=0
 RESTARTS=0
-
 RELOAD_FLAG="$STATE_DIR/reload"
-
-
-migrate_conf() {
-    local key val pkgs="" preset=fast ed=5 pi=2 ktb=0 apps="" w
-    if [ -f "$OLD_CONF_FILE" ]; then
-        while IFS='=' read -r key val; do
-            val="$(echo "$val" | tr -d '"\r' | sed 's/#.*//; s/^[ \t]*//; s/[ \t]*$//')"
-            case "$key" in
-            TARGET_PKGS) pkgs="$val" ;;
-            PRESET) preset="$val" ;;
-            EXIT_DELAY) ed="$val" ;;
-            POLL_IDLE) pi="$val" ;;
-            KERNEL_TOUCH_BOOST) ktb="$val" ;;
-            esac
-        done <"$OLD_CONF_FILE"
-        for w in $pkgs; do apps="$apps $w:$preset:11"; done
-        write_conf "$(clean_apps "$apps")" "$ed" "$pi"
-        mv -f "$OLD_CONF_FILE" "$OLD_CONF_FILE.migrated"
-        glog "settings moved from geode.conf to boost.conf"
-    else
-        write_conf "" 5 2
-    fi
-}
-
 load_conf() {
-    local key val w pkg rest pre fl list="" pkgs="" fmt=1
-    [ -f "$CONF_FILE" ] || migrate_conf
+    local key val w pkg rest pre fl bt list="" pkgs="" fmt=1
+    [ -f "$CONF_FILE" ] || write_conf "" 5 2
     grep -q '^FORMAT=2' "$CONF_FILE" && fmt=2
     APP_LIST=""
     TARGET_PKGS=""
+    BAT_TEMP=0
+    BAT_TEMP_ON=""
     while IFS='=' read -r key val; do
         key="$(echo "$key" | tr -d ' \r\t')"
         val="$(echo "$val" | tr -d '"\r' | sed 's/#.*//; s/^[ \t]*//; s/[ \t]*$//')"
@@ -69,36 +46,47 @@ load_conf() {
                 [ "$rest" = "$w" ] && rest="fast"
                 pre="${rest%%:*}"
                 fl=""
+                bt=""
                 [ "$rest" != "$pre" ] && fl="${rest#*:}"
+                case "$fl" in *:*) bt="${fl#*:}"; fl="${fl%%:*}" ;; esac
+                valid_btfield "$bt" || bt=""
                 case "$pkg" in "" | *[!A-Za-z0-9._]*) continue ;; esac
                 valid_preset "$pre" || pre="fast"
-                case "$fl" in [01][01]) ;; *) fl="1$(default_h "$pre")" ;; esac
-                [ "$fmt" = 2 ] || fl="1$(case "$pre" in performance | fast) echo "${fl#?}" ;; *) echo 0 ;; esac)"
-                list="$list $pkg:$pre:$fl"
+                case "$fl" in [01][01][01]) ;; [01][01]) fl="${fl}0" ;; *) fl="1$(default_h "$pre")0" ;; esac
+                [ "$fmt" = 2 ] || fl="1$(case "$pre" in performance | fast) echo "${fl#?}" ;; *) echo 00 ;; esac)"
+                list="$list $pkg:$pre:$fl${bt:+:$bt}"
                 pkgs="$pkgs $pkg"
             done
             ;;
         EXIT_DELAY | POLL_IDLE)
             case "$val" in "" | *[!0-9]*) ;; *) eval "$key=$val" ;; esac
             ;;
+        BAT_TEMP)
+            valid_battemp "$val" && BAT_TEMP="$val"
+            ;;
+        BAT_TEMP_ON)
+            case "$val" in 0 | 1) BAT_TEMP_ON="$val" ;; esac
+            ;;
         esac
     done <"$CONF_FILE"
     APP_LIST="${list# }"
+    [ "$BAT_TEMP_ON" = 0 ] && BAT_TEMP=0
     TARGET_PKGS="${pkgs# }"
     [ "$POLL_IDLE" -ge 1 ] 2>/dev/null || POLL_IDLE=2
     [ "$POLL_IDLE" -le 10 ] || POLL_IDLE=10
     [ "$EXIT_DELAY" -le 60 ] 2>/dev/null || EXIT_DELAY=60
 }
-
 preset_for() {
     local e
     REPLY="fast"
-    REPLY_FL=11
+    REPLY_FL=110
+    REPLY_BT=""
     for e in $APP_LIST; do
         case "$e" in "$1":*)
             e="${e#*:}"
             REPLY="${e%%:*}"
             REPLY_FL="${e#*:}"
+            case "$REPLY_FL" in *:*) REPLY_BT="${REPLY_FL#*:}"; REPLY_FL="${REPLY_FL%%:*}" ;; esac
             break
             ;;
         esac
@@ -107,19 +95,20 @@ preset_for() {
         REPLY="fast"
     fi
 }
-
 session_for() {
-    local t h
+    local t h b
     preset_for "$1"
     set_tier "$REPLY"
-    t="${REPLY_FL%?}"
+    t="${REPLY_FL%??}"
     h="${REPLY_FL#?}"
+    h="${h%?}"
+    b="${REPLY_FL#??}"
     NEW_TOUCH="$t"
     NEW_THERMAL="$h"
-    NEW_SIG="$TIER$t$h"
+    NEW_BATOC="$b"
+    NEW_SIG="$TIER$t$h$b"
+    case "$REPLY_BT" in "" | g*) NEW_BT="$BAT_TEMP" ;; *) NEW_BT="$REPLY_BT" ;; esac
 }
-
-
 is_target() {
     [ -n "$1" ] || return 1
     case " $TARGET_PKGS " in
@@ -127,13 +116,11 @@ is_target() {
     esac
     return 1
 }
-
 fg_adj() {
     local adj=""
     read -r adj 2>/dev/null <"/proc/$1/oom_score_adj"
     [ -n "$adj" ] && [ "$adj" -lt 200 ]
 }
-
 find_target_fg() {
     local pid c pkg cs procs=/dev/cpuset/top-app/cgroup.procs
     if [ -r "$procs" ]; then
@@ -162,7 +149,6 @@ find_target_fg() {
     done
     return 1
 }
-
 screen_on() {
     local w
     w="$(dumpsys power 2>/dev/null | grep -m1 'mWakefulness=')"
@@ -171,7 +157,6 @@ screen_on() {
     esac
     return 0
 }
-
 game_state() {
     local c="" adj=""
     [ -d "/proc/$GPID" ] || return 2
@@ -185,7 +170,6 @@ game_state() {
     fi
     return 0
 }
-
 top_app_extras() {
     local pid uid
     [ -r /dev/cpuset/top-app/cgroup.procs ] || return 0
@@ -195,8 +179,6 @@ top_app_extras() {
         [ -n "$uid" ] && [ "$uid" -ge 10000 ] && echo "$pid"
     done </dev/cpuset/top-app/cgroup.procs
 }
-
-
 enter_game() {
     local t0 home sys_pids app_pids
     GPID="$1"
@@ -205,26 +187,25 @@ enter_game() {
     PRESET="$REPLY"
     UPERF_TOUCH="$NEW_TOUCH"
     UNLOCK_THERMAL="$NEW_THERMAL"
+    UNLOCK_BATOC="$NEW_BATOC"
     SIG="$NEW_SIG"
+    ENTER_BT="$NEW_BT"
     PAUSED=0
     AWAY=0
     TICK=0
     RESTARTS=0
     t0="$(date +%s)"
-
     if [ ! -f "$USER_PATH_RAW/uperf.json" ]; then
         glog "ERROR: $USER_PATH/uperf.json missing, reinstall the module. Not boosting $GPKG."
         GSKIP=1
         return
     fi
     GSKIP=0
-
     st_init
     echo "$GPID $GPKG" >"$ACTIVE_FLAG"
     true >"$STATE_DIR/had_session"
     clear_log
-    log "$(date '+%H:%M:%S') enter $GPKG pid=$GPID preset=$PRESET tier=$TIER thermal_unlock=$UNLOCK_THERMAL uperf_touch=$UPERF_TOUCH baseline=$([ -s "$BASELINE" ] && echo yes || echo no)"
-
+    log "$(date '+%H:%M:%S') enter $GPKG pid=$GPID preset=$PRESET tier=$TIER thermal_unlock=$UNLOCK_THERMAL battery_limit_off=$UNLOCK_BATOC uperf_touch=$UPERF_TOUCH baseline=$([ -s "$BASELINE" ] && echo yes || echo no)"
     if uperf_sched_enabled; then
         PROC_TABLE="$(proc_table)"
         home="$(home_package)"
@@ -236,7 +217,6 @@ enter_game() {
         PROC_TABLE=""
         log "thread snapshot taken (uperf sched module is on)"
     fi
-
     record_uperf_knobs
     apply_game_tweaks >>"$LOG_FILE" 2>&1
     log "$(date '+%H:%M:%S') tweaks applied"
@@ -245,9 +225,9 @@ enter_game() {
     else
         glog "uperf failed to start (see uperf_log.txt)"
     fi
-    glog "enter $GPKG: preset $PRESET on, thermal limits $([ "$UNLOCK_THERMAL" = 1 ] && echo OFF || echo stock), uperf touch boost $([ "$UPERF_TOUCH" = 1 ] && echo on || echo off) ($(($(date +%s) - t0)) s)"
+    bt_set "$ENTER_BT"
+    glog "enter $GPKG: preset $PRESET on, battery temp $(bt_desc), thermal limits $([ "$UNLOCK_THERMAL" = 1 ] && echo OFF || echo stock), battery limits $([ "$UNLOCK_BATOC" = 1 ] && echo OFF || echo stock), uperf touch boost $([ "$UPERF_TOUCH" = 1 ] && echo on || echo off) ($(($(date +%s) - t0)) s)"
 }
-
 switch_app() {
     local old="$GPKG" oldtier="$TIER"
     session_for "$2"
@@ -266,9 +246,9 @@ switch_app() {
     [ "$PAUSED" = 1 ] && uperf_resume
     PAUSED=0
     AWAY=0
-    glog "switch $old -> $GPKG: preset $PRESET"
+    bt_set "$NEW_BT"
+    glog "switch $old -> $GPKG: preset $PRESET, battery temp $(bt_desc)"
 }
-
 apply_reload() {
     rm -f "$RELOAD_FLAG"
     load_conf
@@ -290,8 +270,11 @@ apply_reload() {
         echo "$PRESET" >"$USER_PATH/cur_powermode.txt"
         glog "$GPKG: preset changed to $PRESET"
     fi
+    if [ "$NEW_BT" != "$BT_CUR" ]; then
+        bt_set "$NEW_BT"
+        glog "$GPKG: battery temp $(bt_desc)"
+    fi
 }
-
 take_baseline() {
     local t0
     t0="$(date +%s)"
@@ -302,7 +285,6 @@ take_baseline() {
     ST_MODE="apply"
     glog "stock baseline recorded: $(wc -l <"$BASELINE" 2>/dev/null) nodes ($(($(date +%s) - t0)) s)"
 }
-
 baseline_due() {
     local up
     [ -s "$BASELINE" ] && return 1
@@ -311,7 +293,6 @@ baseline_due() {
     [ "${up%%.*}" -ge 45 ] || return 1
     screen_on
 }
-
 park_idle() {
     [ -f "$RELOAD_FLAG" ] && return 0
     glog "no apps boosted: watcher paused until one is"
@@ -321,12 +302,12 @@ park_idle() {
     wait $! 2>/dev/null
     rm -f "$STATE_DIR/park_pid"
 }
-
 leave_game() {
     local t0 extras fixed
     t0="$(date +%s)"
     st_init
     log "$(date '+%H:%M:%S') leave ($1)"
+    bt_stop
     uperf_stop
     if [ -f "$THR_SNAP" ]; then
         extras="$(top_app_extras)"
@@ -350,7 +331,6 @@ leave_game() {
     PAUSED=0
     AWAY=0
 }
-
 reset_stock() {
     local fixed
     st_init
@@ -360,6 +340,7 @@ reset_stock() {
     fi
     clear_log
     log "$(date '+%H:%M:%S') reset to stock (requested from the settings)"
+    bt_stop
     uperf_stop
     [ -f "$THR_SNAP" ] && thr_restore
     cp -f "$BASELINE" "$SAVED"
@@ -377,7 +358,6 @@ reset_stock() {
         echo "ok: done, but a few values differ from stock (details in apply.log)"
     fi
 }
-
 on_term() {
     [ -f "$STATE_DIR/park_pid" ] && kill "$(cat "$STATE_DIR/park_pid")" 2>/dev/null && rm -f "$STATE_DIR/park_pid"
     if [ -f "$ACTIVE_FLAG" ]; then
@@ -386,23 +366,20 @@ on_term() {
     rm -f "$PIDFILE"
     exit 0
 }
-
-
 main() {
     local old n=0 st
     wait_until_login
     st_init
     mkdir -p "$USER_PATH"
-
     old="$(cat "$PIDFILE" 2>/dev/null)"
     if [ -n "$old" ] && [ "$old" != "$$" ] && [ -d "/proc/$old" ] && grep -q boost_daemon "/proc/$old/cmdline" 2>/dev/null; then
         exit 0
     fi
     echo "$$" >"$PIDFILE"
     trap on_term TERM INT HUP
-
     load_conf
     glog_trim
+    bt_stop
     if [ -f "$ACTIVE_FLAG" ]; then
         read -r GPID GPKG <"$ACTIVE_FLAG"
         leave_game "recovered after restart"
@@ -413,7 +390,6 @@ main() {
     fi
     rm -f "$RELOAD_FLAG"
     glog "watcher started, apps: ${APP_LIST:-none selected yet}"
-
     while true; do
         [ -f "$RELOAD_FLAG" ] && apply_reload
         if [ -z "$GPID" ]; then
@@ -436,7 +412,6 @@ main() {
             sleep "$POLL_IDLE"
             continue
         fi
-
         game_state
         st=$?
         if [ "$GSKIP" = 1 ]; then
@@ -485,7 +460,6 @@ main() {
         sleep 1
     done
 }
-
 if [ "$1" = "--reset" ]; then
     reset_stock
     exit $?

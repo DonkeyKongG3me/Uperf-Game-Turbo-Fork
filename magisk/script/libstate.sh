@@ -1,24 +1,18 @@
 #!/system/bin/sh
-
 SAVED="$STATE_DIR/saved.list"
 BASELINE="$STATE_DIR/baseline.list"
 THR_SNAP="$STATE_DIR/threads.snap"
 SET_LIST="$STATE_DIR/settings.list"
 ACTIVE_FLAG="$STATE_DIR/active"
 VERIFY_LOG="$STATE_DIR/verify.txt"
-
 RS="$(printf '\036')"
 NL='
 '
-
 ST_MODE="apply"
-
 st_init() {
     mkdir -p "$STATE_DIR"
     chmod 0700 "$STATE_DIR"
 }
-
-
 _st_record() {
     local meta v=""
     meta="$(stat -c '%a|%u:%g' "$2" 2>/dev/null)" || return 1
@@ -28,7 +22,6 @@ _st_record() {
     fi
     echo "$1|$meta|$2|$v" >>"${3:-$SAVED}"
 }
-
 _st_note() {
     if [ "$ST_MODE" = "baseline" ]; then
         _st_record "$1" "$2" "$BASELINE"
@@ -38,19 +31,15 @@ _st_note() {
         _st_record "$1" "$2" "$SAVED"
     fi
 }
-
 st_record_only() {
     local p
     for p in $2; do
         [ -f "$p" ] && _st_note "$1" "$p"
     done
 }
-
-
 lock_val() {
     lock_val_k raw "$1" "$2"
 }
-
 lock_val_k() {
     local p
     for p in $3; do
@@ -64,7 +53,6 @@ lock_val_k() {
         fi
     done
 }
-
 mask_val() {
     local p
     for p in $2; do
@@ -75,7 +63,6 @@ mask_val() {
         fi
     done
 }
-
 mutate() {
     local p
     for p in $2; do
@@ -87,7 +74,6 @@ mutate() {
         fi
     done
 }
-
 lock() {
     local p
     for p in $1; do
@@ -99,7 +85,6 @@ lock() {
         fi
     done
 }
-
 perm_val() {
     local p
     for p in $2; do
@@ -110,8 +95,6 @@ perm_val() {
         fi
     done
 }
-
-
 st_setting() {
     local old
     [ "$ST_MODE" = "apply" ] || return 0
@@ -120,7 +103,6 @@ st_setting() {
     grep -q "^$1|$2|" "$SET_LIST" 2>/dev/null || echo "$1|$2|$old" >>"$SET_LIST"
     settings put "$1" "$2" "$3" 2>/dev/null
 }
-
 st_restore_settings() {
     local ns key old
     [ -f "$SET_LIST" ] || return 0
@@ -133,8 +115,6 @@ st_restore_settings() {
     done <"$SET_LIST"
     rm -f "$SET_LIST"
 }
-
-
 thr_collect() {
     local pid stat_files="" status_files=""
     for pid in "$@"; do
@@ -168,18 +148,15 @@ thr_collect() {
                 print P[t], t, pol[t], rtp[t], nic[t], ((t in m) ? m[t] : "-"), ((t in cs && cs[t] != "") ? cs[t] : "-"), comm[t]
         }'
 }
-
 thr_snapshot() {
     local grp="$1"
     shift
     [ $# -gt 0 ] || return 0
     thr_collect "$@" | sed "s/^/$grp /" >>"$THR_SNAP"
 }
-
 full_cpu_mask() {
     awk '{ n = split($0, a, /[-,]/); m = 1; for (i = 0; i <= a[n]; i++) m *= 2; printf "%x\n", m - 1 }' /sys/devices/system/cpu/possible 2>/dev/null
 }
-
 thr_restore() {
     local pids full fifo
     [ -f "$THR_SNAP" ] || return 0
@@ -233,12 +210,9 @@ thr_restore() {
     sh "$STATE_DIR/threads.fix" >/dev/null 2>&1
     rm -f "$THR_SNAP" "$STATE_DIR/threads.now" "$STATE_DIR/threads.fix"
 }
-
-
 _st_num() {
     echo "${1//$RS/$NL}" | grep -m1 '[0-9]' | grep -oE -- '-?[0-9]+' | tail -n1
 }
-
 _st_put_back() {
     local kind="$1" p="$2" v="$3" n line id st
     case "$kind" in
@@ -316,7 +290,6 @@ _st_put_back() {
         ;;
     esac
 }
-
 _st_restore_pass() {
     local kind mode own p v cur
     while IFS='|' read -r kind mode own p v; do
@@ -333,7 +306,6 @@ _st_restore_pass() {
         chown "$own" "$p" 2>/dev/null
     done <"$STATE_DIR/restore.list"
 }
-
 _st_verify() {
     local kind mode own p v cur meta bad=0
     : >"$VERIFY_LOG"
@@ -354,7 +326,6 @@ _st_verify() {
     done <"$STATE_DIR/restore.list"
     echo "$bad"
 }
-
 st_restore_values() {
     local bad
     [ -f "$SAVED" ] || return 0

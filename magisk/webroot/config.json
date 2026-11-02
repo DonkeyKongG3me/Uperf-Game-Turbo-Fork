@@ -1,3 +1,6 @@
 {
-  "title": "Uperf Game Turbo Fork"
+  "title": "Uperf Game Turbo 1.2",
+  "permissions": [
+    "android.permission.QUERY_ALL_PACKAGES"
+  ]
 }

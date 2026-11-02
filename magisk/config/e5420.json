@@ -463,20 +463,23 @@
       },
       "touch": {
         "cpu.baseSampleTime": 0.04,
-        "sched.scene": "touch"
+        "sched.scene": "touch",
+        "cpu.latencyTime": 0.0
       },
       "trigger": {
         "cpu.latencyTime": 0.0,
-        "cpu.margin": 0.4,
+        "cpu.margin": 0.5,
         "sched.scene": "touch"
       },
       "gesture": {
         "cpu.margin": 0.6,
-        "sched.scene": "touch"
+        "sched.scene": "touch",
+        "cpu.latencyTime": 0.0
       },
       "junk": {
         "cpu.burst": 0.6,
-        "sched.scene": "touch"
+        "sched.scene": "touch",
+        "cpu.latencyTime": 0.0
       },
       "switch": {
         "cpu.latencyTime": 0.0,
@@ -505,20 +508,25 @@
       },
       "touch": {
         "cpu.baseSampleTime": 0.04,
-        "sched.scene": "touch"
+        "sched.scene": "touch",
+        "cpu.margin": 0.4,
+        "cpu.latencyTime": 0.0
       },
       "trigger": {
         "cpu.latencyTime": 0.0,
-        "cpu.margin": 0.2,
+        "cpu.margin": 0.5,
         "sched.scene": "touch"
       },
       "gesture": {
-        "cpu.margin": 0.2,
-        "sched.scene": "touch"
+        "cpu.margin": 0.6,
+        "sched.scene": "touch",
+        "cpu.latencyTime": 0.0
       },
       "junk": {
-        "cpu.burst": 0.2,
-        "sched.scene": "touch"
+        "cpu.burst": 0.6,
+        "sched.scene": "touch",
+        "cpu.margin": 0.4,
+        "cpu.latencyTime": 0.0
       },
       "switch": {
         "cpu.latencyTime": 0.0,
@@ -544,19 +552,24 @@
         "sched.scene": "idle"
       },
       "touch": {
-        "sched.scene": "touch"
+        "sched.scene": "touch",
+        "cpu.margin": 0.4,
+        "cpu.burst": 0.5
       },
       "trigger": {
         "cpu.margin": 0.5,
-        "sched.scene": "touch"
+        "sched.scene": "touch",
+        "cpu.burst": 0.5
       },
       "gesture": {
         "cpu.margin": 0.6,
-        "sched.scene": "touch"
+        "sched.scene": "touch",
+        "cpu.burst": 0.5
       },
       "junk": {
         "cpu.burst": 0.6,
-        "sched.scene": "touch"
+        "sched.scene": "touch",
+        "cpu.margin": 0.4
       },
       "switch": {
         "cpu.burst": 0.5,

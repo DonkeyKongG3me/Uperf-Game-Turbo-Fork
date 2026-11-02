@@ -15,23 +15,23 @@ Revolutionary performance module for Android. Supports ~120 SOC's.
 
 ## 🔎 Overview
 
-🚀 Uperf Game Turbo Fork is a revolutionary Magisk/APatch/KernelSU module that lets you choose between 4 performance profiles for each app. It dramatically improves speed and responsiveness for apps you choose. Unselected apps use the stock performance settings.
+ Uperf Game Turbo Fork is a revolutionary Magisk/APatch/KernelSU module that lets you choose between 4 performance profiles for each app. It dramatically improves speed and responsiveness for apps you choose. Unselected apps use the stock performance settings.
 
-📈 This module is designed to be used long-term unlike other performance modules that apply a fast profile to the entire device temporarily. You can enjoy both insane speeds and battery life without needing multiple modules.
+ This module is designed to be used long-term unlike other performance modules that apply a fast profile to the entire device temporarily. You can enjoy both insane speeds and battery life without needing multiple modules.
 
 ---
 
 ### 🧩 Features
 
-- 👥 **Per-app profiles.** Pick which apps get a boost and which profile each one uses.
+- **Per-app profiles.** Pick which apps get a boost and which profile each one uses.
 
-- 🎭 **Four profiles.** You can pick these profiles, you decide which one suits each app best: Efficient, Balanced, Rapid and Extreme.
+- **Four profiles.** You can pick these profiles, you decide which one suits each app best: Efficient, Balanced, Rapid and Extreme.
 
-- 🕑 **Configure return-to-stock delay.** Choose how often the module checks if a boosted app is running and how quickly stock values return on exit.
+- **Configure return-to-stock delay.** Choose how often the module checks if a boosted app is running and how quickly stock values return on exit.
 
-- 🎨 **Customize the UI.** Change the interface theme, theme colors, animations and much more!
+- **Customize the UI.** Change the interface theme, theme colors, animations and much more!
 
-- 🪲 **Logging features.** In case something doesn't work as intended, built-in log gathering will help you understand what went wrong. Send them to me if you want to report a bug.
+- **Logging features.** In case something doesn't work as intended, built-in log gathering will help you understand what went wrong. Send them to me if you want to report a bug.
 
 ---
 

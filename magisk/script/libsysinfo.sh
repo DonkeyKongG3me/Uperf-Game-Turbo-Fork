@@ -1,15 +1,11 @@
 #!/system/bin/sh
-
-# $1:"4.14" return:string_in_version
 soc_model() {
 	soc_model=$(getprop ro.soc.model)
 	echo "$soc_model"
 }
-
 match_linux_version() {
 	cat /proc/version | grep -i "$1"
 }
-
 get_socid() {
 	if [ -f /sys/devices/soc0/soc_id ]; then
 		cat /sys/devices/soc0/soc_id
@@ -17,19 +13,15 @@ get_socid() {
 		cat /sys/devices/system/soc/soc0/id
 	fi
 }
-
 get_nr_core() {
 	cat /proc/stat | grep -c "cpu[0-9]"
 }
-
 get_maxfreq() {
 	cat "/sys/devices/system/cpu/cpu$1/cpufreq/cpuinfo_max_freq"
 }
-
 get_socname() {
 	cat "/sys/devices/soc0/machine" |  tr '[:upper:]' '[:lower:]'
 }
-
 is_aarch64() {
 	if [ "$(getprop ro.product.cpu.abi)" = "arm64-v8a" ]; then
 		echo "true"
@@ -37,7 +29,6 @@ is_aarch64() {
 		echo "false"
 	fi
 }
-
 is_eas() {
 	if [ "$(grep sched /sys/devices/system/cpu/cpu0/cpufreq/scaling_available_governors)" != "" ]; then
 		echo "true"
@@ -45,7 +36,6 @@ is_eas() {
 		echo "false"
 	fi
 }
-
 is_mtk() {
 	soc_model="$(getprop ro.soc.model)"
 	hw_check="$(getprop ro.hardware)
@@ -53,14 +43,10 @@ is_mtk() {
                     $(getprop ro.boot.hardware)
                     $(getprop ro.soc.manufacturer)
                     $soc_model"
-
 	pattern='(mt[0-9]{4}|mediatek|dimensity|helio[ _-]g?[0-9]{2})'
-
 	echo "$hw_check" | tr '[:upper:]' '[:lower:]' | grep -qE "$pattern"
-
 	[ $? -eq 0 ] && echo "true" || echo "false"
 }
-
 miui_check() {
 	if [ "$(printf '%s\n' "90" "$(getprop ro.miui.ui.version.name)" | sort -V | head -n1)" = "90" ]; then
 		echo "true"
@@ -68,14 +54,12 @@ miui_check() {
 		echo "false"
 	fi
 }
-
 _get_sm6150_type() {
 	case "$(get_socid)" in
 	365 | 366) echo "sdm730" ;;
 	355 | 369) echo "sdm675" ;;
 	esac
 }
-
 _get_sdm76x_type() {
 	if [ "$(get_maxfreq 7)" -gt 2300000 ]; then
 		echo "sdm765"
@@ -83,7 +67,6 @@ _get_sdm76x_type() {
 		echo "sdm750"
 	fi
 }
-
 _get_lahaina_type() {
 	if [ "$(get_maxfreq 7)" -gt 2600000 ]; then
 		echo "sdm888"
@@ -95,7 +78,6 @@ _get_lahaina_type() {
 		fi
 	fi
 }
-
 _get_taro_type() {
 	if [ "$(get_socname)" = cape ] || [ "$(get_socname)" = capep ] || [ "$(get_socname)" = ukee ] || [ "$(get_socname)" = ukeep ]; then
 		echo "sdm8g1+"
@@ -107,7 +89,12 @@ _get_taro_type() {
 		fi
 	fi
 }
-
+_get_volcano_type() {
+	case "$(soc_model)" in
+	*-AC | *-ac) echo "sdm7sg4" ;;
+	*) echo "sdm7sg3" ;;
+	esac
+}
 _get_pinekala_type() {
 	if [ "$(soc_model)" = "SM8650" ]; then
 		echo "sdm8g3"
@@ -117,7 +104,6 @@ _get_pinekala_type() {
 		echo "sdm7+g3"
 	fi
 }
-
 _get_kalama_type() {
 	if [ "$(get_maxfreq 7)" -gt 3300000 ]; then
 		echo "sdm8cxg2"
@@ -125,7 +111,6 @@ _get_kalama_type() {
 		echo "sdm8g2"
 	fi
 }
-
 _get_sun_type() {
 	if [ "$(soc_model)" = "SM8750" ]; then
 		echo "sdm8e"
@@ -135,7 +120,6 @@ _get_sun_type() {
 		echo "sdm8e"
 	fi
 }
-
 _get_rk30sdk() {
 	if [ -d /sys/devices/system/cpu/cpu7 ]; then
 		echo "rk3588"
@@ -143,7 +127,6 @@ _get_rk30sdk() {
 		echo "rk356"
 	fi
 }
-
 get_config_name() {
 	case "$1" in
 	"rk30sdk") _get_rk30sdk ;;
@@ -155,7 +138,8 @@ get_config_name() {
 	"yupik") _get_lahaina_type ;;
 	"sun") _get_sun_type ;;
 	"canoe") echo "sdm8eg5" ;;
-	"volcano") echo "sdm7sg3" ;;
+	"volcano" | "sm7635") _get_volcano_type ;;
+	"cliffs") echo "sdm8sg3" ;;
 	"kona") echo "sdm865" ;;
 	"msmnile") echo "sdm855" ;;
 	"sdm845") echo "sdm845" ;;
@@ -181,8 +165,9 @@ get_config_name() {
 	"sdm636") echo "sdm660" ;;
 	"trinket") echo "sdm665" ;;
 	"bengal") echo "sdm680" ;;
-	"msm8956") echo "sdm650" ;;
+	"msm8956") echo "sdm808" ;;
 	"msm8992") echo "sdm808" ;;
+	"msm8994") echo "sdm810" ;;
 	"msm8998") echo "sdm835" ;;
 	"msm8996") echo "sdm820" ;;
 	"msm8909") echo "sdm210" ;;
@@ -250,7 +235,7 @@ get_config_name() {
 	"mt6886") echo "mtd7000" ;;
 	"mt6878") echo "mtd7300" ;;
 	"mt6889") echo "mtd1000" ;;
-	"mt6891") echo "mtd1100" ;;
+	"mt6891") echo "mtd1200" ;;
 	"mt6893") echo "mtd1200" ;;
 	"mt6895") echo "mtd8100" ;;
 	"rm6893") echo "mtd1200" ;;
@@ -333,12 +318,68 @@ get_config_name() {
 	"tegra") echo "tegra" ;;
 	"dragon") echo "tegra" ;;
 	"tegraa210_dragon") echo "tegra" ;;
-	"latte") echo "z8500" ;;
-	"gmin") echo "z8500" ;;
 	"O1_asic") echo "xro1" ;;
 	"song") echo "song1" ;;
 	"rk356x") echo "rk356" ;;
 	"rk3588") echo "rk3588" ;;
 	*) echo "unsupported" ;;
 	esac
+}
+detect_config() {
+	local c
+	c="$(get_config_name "$(getprop ro.board.platform)")"
+	[ "$c" = "unsupported" ] && c="$(get_config_name "$(getprop ro.product.board)")"
+	echo "$c"
+}
+chip_family() {
+	case "$(detect_config)" in
+	gs*) echo "pixel" ;;
+	e[0-9]*) echo "exynos" ;;
+	kirin*) echo "kirin" ;;
+	t[0-9]* | sp*) echo "unisoc" ;;
+	tegra*) echo "tegra" ;;
+	rk*) echo "rockchip" ;;
+	xro1) echo "xring" ;;
+	song1) echo "surge" ;;
+	mt*) echo "mediatek" ;;
+	sdm*) echo "qualcomm" ;;
+	*) if [ "$(is_mtk)" = "true" ]; then echo "mediatek"; else echo "other"; fi ;;
+	esac
+}
+zone_hot() {
+	local tp ty tt lo=""
+	read -r tp 2>/dev/null <"$1/temp" || return 1
+	for ty in "$1"/trip_point_*_type; do
+		[ -f "$ty" ] || continue
+		[ "$(cat "$ty" 2>/dev/null)" = "passive" ] || continue
+		read -r tt 2>/dev/null <"${ty%_type}_temp" || continue
+		case "$tt" in "" | *[!0-9-]*) continue ;; esac
+		if [ -z "$lo" ] || [ "$tt" -lt "$lo" ]; then lo="$tt"; fi
+	done
+	[ -n "$lo" ] && [ "$tp" -ge "$lo" ] 2>/dev/null
+}
+thermal_cdevs() {
+	local z c d t h hot=" "
+	for z in /sys/class/thermal/thermal_zone*; do
+		[ -f "$z/policy" ] || continue
+		read -r t 2>/dev/null <"$z/policy"
+		[ "$t" = "user_space" ] && continue
+		if zone_hot "$z"; then h=1; else h=0; fi
+		[ "$h" = 1 ] || continue
+		for c in "$z"/cdev[0-9]*; do
+			[ -L "$c" ] || continue
+			d="$(readlink -f "$c")"
+			hot="$hot${d##*/} "
+		done
+	done
+	for d in /sys/class/thermal/cooling_device*; do
+		[ -f "$d/type" ] && [ -f "$d/cur_state" ] || continue
+		read -r t 2>/dev/null <"$d/type"
+		case "$t" in *[Bb][Aa][Tt]* | *[Cc][Hh][Aa][Rr][Gg]* | *[Cc][Hh][Gg]* | *[Uu][Ss][Bb]*) continue ;; esac
+		case "$t" in
+		*[Cc][Pp][Uu]* | *[Gg][Pp][Uu]* | *[Tt][Pp][Uu]* | *[Gg]3[Dd]* | [Bb][Ii][Gg] | [Mm][Ii][Dd] | [Ll][Ii][Tt][Tt][Ll][Ee]) ;;
+		*) continue ;;
+		esac
+		case "$hot" in *" ${d##*/} "*) echo "$d 1" ;; *) echo "$d 0" ;; esac
+	done
 }

@@ -1,22 +1,21 @@
 #!/system/bin/sh
-
 BASEDIR="$(dirname "$(readlink -f "$0")")"
 . "$BASEDIR/pathinfo.sh"
 . "$BASEDIR/libconf.sh"
-
+. "$BASEDIR/libsysinfo.sh"
+. "$BASEDIR/libappvis.sh"
+. "$BASEDIR/libbattemp.sh"
 PIDFILE="$STATE_DIR/daemon.pid"
 BASELINE="$STATE_DIR/baseline.list"
 BB="$BIN_PATH/busybox/busybox"
 RS="$(printf '\036')"
 UI_DIR="/data/adb/uperf_ui"
 UI_FILE="$UI_DIR/ui.json"
-
 daemon_pid() {
     local p
     p="$(cat "$PIDFILE" 2>/dev/null)"
     [ -n "$p" ] && [ -d "/proc/$p" ] && grep -q boost_daemon "/proc/$p/cmdline" 2>/dev/null && echo "$p"
 }
-
 do_stop() {
     local p i
     p="$(daemon_pid)"
@@ -29,13 +28,11 @@ do_stop() {
     echo "daemon did not exit, killing it"
     kill -9 "$p" 2>/dev/null
 }
-
 do_start() {
     [ -n "$(daemon_pid)" ] && return 0
     ASH_STANDALONE=1 "$BB" setsid nohup "$BB" sh "$SCRIPT_PATH/boost_daemon.sh" </dev/null >/dev/null 2>&1 &
     sleep 1
 }
-
 do_status() {
     local p a
     p="$(daemon_pid)"
@@ -54,11 +51,17 @@ do_status() {
     fi
     a="$(pidof uperf 2>/dev/null)"
     echo "uperf   : ${a:-not running}"
+    if ! bt_supported; then
+        echo "bat temp: not supported ($BT_NODE missing or read-only)"
+    elif [ -n "$(bt_pid)" ]; then
+        echo "bat temp: spoofing $(($(cat "$BT_VALF" 2>/dev/null || echo 0) / 10)) C, node reads $(cat "$BT_NODE" 2>/dev/null)$(bt_charging && echo ', paused while charging')"
+    else
+        echo "bat temp: real ($(cat "$BT_NODE" 2>/dev/null))"
+    fi
     echo "settings: $USER_PATH/boost.conf"
     echo "----- recent events -----"
     tail -n 12 "$GAME_LOG" 2>/dev/null
 }
-
 show() {
     local t="$1" f v
     shift
@@ -70,7 +73,6 @@ show() {
     done
     echo
 }
-
 do_dump() {
     local out="$USER_PATH/state_dump.txt" p
     {
@@ -97,6 +99,26 @@ do_dump() {
             /proc/perfmgr/syslimiter/syslimiter_force_disable /sys/kernel/eara_thermal/enable
         show "xiaomi" /sys/devices/virtual/thermal/thermal_message/cpu_limits /sys/module/migt/parameters/* \
             /proc/sys/glk/* /proc/sys/migt/*
+        show "battery limits" /proc/mtk_batoc_throttling/battery_oc_protect_stop \
+            /sys/devices/platform/low-battery-throttling/low_battery_protect_stop \
+            /sys/devices/platform/low-battery-throttling/low_battery_protect_level \
+            /sys/devices/virtual/pmic/mitigation/instruction/enable_sw_mitigation \
+            /sys/devices/virtual/pmic/mitigation/instruction/enable_hw_mitigation \
+            /sys/devices/virtual/pmic/mitigation/last_triggered_count/*
+        show "battery temperature" "$BT_NODE" "$BT_VALF" /sys/class/power_supply/battery/temp /sys/class/power_supply/battery/status
+        show "samsung" /sys/power/cpufreq_max_limit /sys/power/cpufreq_min_limit
+        echo "## cooling devices (type, state, owner)"
+        for p in /sys/class/thermal/cooling_device*; do
+            [ -f "$p/type" ] || continue
+            echo "${p##*/} $(cat "$p/type" 2>/dev/null) state=$(cat "$p/cur_state" 2>/dev/null)/$(cat "$p/max_state" 2>/dev/null) $(stat -c '%a %U' "$p/cur_state" 2>/dev/null)"
+        done
+        echo
+        echo "## thermal zones (type, policy, temp)"
+        for p in /sys/class/thermal/thermal_zone*; do
+            [ -f "$p/type" ] || continue
+            echo "${p##*/} $(cat "$p/type" 2>/dev/null) $(cat "$p/policy" 2>/dev/null) $(cat "$p/temp" 2>/dev/null)"
+        done
+        echo
         show "ddr" /sys/class/devfreq/mtk-dvfsrc-devfreq/userspace/set_freq /sys/class/devfreq/mtk-dvfsrc-devfreq/cur_freq
         echo "## services"
         getprop | grep -iE '^\[init\.svc\.[^]]*(power|perf|therm|boost|joyose)'
@@ -122,7 +144,6 @@ do_dump() {
     } >"$out" 2>&1
     echo "written: $out"
 }
-
 do_state() {
     local a
     if [ -n "$(daemon_pid)" ]; then echo "daemon=running"; else echo "daemon=stopped"; fi
@@ -137,29 +158,62 @@ do_state() {
     echo "sdk=$(getprop ro.build.version.sdk)"
     echo "version=$(grep '^version=' "$MODULE_PATH/module.prop" | cut -d= -f2-)"
 }
-
+has() {
+    local p
+    for p in "$@"; do
+        [ -e "$p" ] && { echo 1; return; }
+    done
+    echo 0
+}
+do_caps() {
+    local fam
+    fam="$(chip_family)"
+    echo "family=$fam"
+    echo "config=$(detect_config)"
+    echo "th_mtk=$(has /proc/ppm/policy_status /proc/gpufreqv2/limit_table /proc/gpufreq/gpufreq_limit_table \
+        /sys/kernel/fpsgo/fbt/thrm_enable /sys/kernel/fpsgo/fbt/thrm_temp_th /sys/kernel/eara_thermal/enable \
+        /proc/perfmgr/syslimiter/syslimiter_force_disable)"
+    echo "th_mi=$(has /sys/devices/virtual/thermal/thermal_message/cpu_limits)"
+    echo "th_gpu=$(has /sys/class/kgsl/kgsl-3d0/throttling /sys/class/kgsl/kgsl-3d0/thermal_pwrlevel)"
+    echo "th_msm=$(has /sys/module/msm_thermal/parameters/enabled /sys/module/msm_thermal/core_control/enabled)"
+    case "$fam" in
+    pixel | exynos) echo "th_cdev=$(thermal_cdevs | grep -c .)" ;;
+    *) echo "th_cdev=0" ;;
+    esac
+    if [ "$fam" = "exynos" ]; then echo "th_exy=$(has /sys/power/cpufreq_max_limit)"; else echo "th_exy=0"; fi
+    echo "batoc=$(has /proc/mtk_batoc_throttling/battery_oc_protect_stop /sys/devices/platform/low-battery-throttling/low_battery_protect_stop \
+        /sys/devices/virtual/pmic/mitigation/instruction/enable_sw_mitigation)"
+    echo "bat_low=$(has /sys/devices/platform/low-battery-throttling/low_battery_protect_stop \
+        /sys/devices/virtual/pmic/mitigation/instruction/enable_sw_mitigation)"
+    if bt_supported; then echo "bat_temp=1"; else echo "bat_temp=0"; fi
+}
 do_getconf() {
     if [ -f "$CONF_FILE" ]; then
         cat "$CONF_FILE"
-    elif [ -f "$OLD_CONF_FILE" ]; then
-        echo "LEGACY=1"
-        cat "$OLD_CONF_FILE"
     fi
 }
-
 do_setconf() {
-    local apps ed pi
+    local apps ed pi bt bon
     apps="$(clean_apps "$1")"
     case "$2" in "" | *[!0-9]*) ed=5 ;; *) ed="$2" ;; esac
     case "$3" in "" | *[!0-9]*) pi=2 ;; *) pi="$3" ;; esac
-    write_conf "$apps" "$ed" "$pi" || { echo "error: could not write $CONF_FILE"; return 1; }
-    [ -f "$OLD_CONF_FILE" ] && mv -f "$OLD_CONF_FILE" "$OLD_CONF_FILE.migrated"
+    bt="$4"
+    if ! valid_battemp "$bt"; then
+        bt="$(sed -n 's/^BAT_TEMP=\([0-9]*\).*/\1/p' "$CONF_FILE" 2>/dev/null | head -n1)"
+        valid_battemp "$bt" || bt=0
+    fi
+    bon="$5"
+    case "$bon" in 0 | 1) ;; *)
+        bon="$(sed -n 's/^BAT_TEMP_ON=\([01]\).*/\1/p' "$CONF_FILE" 2>/dev/null | head -n1)"
+        [ -n "$bon" ] || { [ "$bt" -gt 0 ] && bon=1 || bon=0; }
+        ;;
+    esac
+    write_conf "$apps" "$ed" "$pi" "$bt" "$bon" || { echo "error: could not write $CONF_FILE"; return 1; }
     mkdir -p "$STATE_DIR"
     true >"$STATE_DIR/reload"
     [ -f "$STATE_DIR/park_pid" ] && kill "$(cat "$STATE_DIR/park_pid")" 2>/dev/null
     echo "ok"
 }
-
 do_resetstock() {
     local r
     if [ ! -s "$BASELINE" ]; then
@@ -173,7 +227,6 @@ do_resetstock() {
     case "$r" in ok:*) return 0 ;; esac
     return 1
 }
-
 do_savelogs() {
     local out f
     out="$USER_PATH/uperf_logs_$(date '+%Y%m%d_%H%M%S').txt"
@@ -193,22 +246,21 @@ do_savelogs() {
     } >"$out" 2>&1
     if [ -s "$out" ]; then echo "written: $out"; else echo "error: could not write $out"; return 1; fi
 }
-
 do_uiset() {
     mkdir -p "$UI_DIR"
     echo "$1" | base64 -d >"$UI_FILE.tmp" 2>/dev/null && [ -s "$UI_FILE.tmp" ] && mv -f "$UI_FILE.tmp" "$UI_FILE" && echo ok
 }
-
 do_colors() {
     echo "overlay=$(settings get secure theme_customization_overlay_packages 2>/dev/null)"
     dumpsys wallpaper 2>/dev/null | grep -m4 -iE 'primaryColor|mMainColors|colors' | tr '\n' ' ' | sed 's/^/wallpaper=/'
     echo
 }
-
 case "$1" in
 state) do_state ;;
+caps) do_caps ;;
+uperfcfg) cat "$USER_PATH_RAW/uperf.json" 2>/dev/null ;;
 getconf) do_getconf ;;
-setconf) do_setconf "$2" "$3" "$4" ;;
+setconf) do_setconf "$2" "$3" "$4" "$5" "$6" ;;
 savelogs) do_savelogs ;;
 resetstock) do_resetstock ;;
 uiget) cat "$UI_FILE" 2>/dev/null ;;
@@ -222,6 +274,7 @@ pkgdates)
     done
     ;;
 colors) do_colors ;;
+appvis) appvis_grant "$2" ;;
 log)
     case "$2" in
     session) cat "$LOG_FILE" 2>/dev/null ;;

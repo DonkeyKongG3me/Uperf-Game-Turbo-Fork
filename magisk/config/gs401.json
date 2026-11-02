@@ -473,20 +473,24 @@
         "sched.scene": "idle"
       },
       "touch": {
-        "cpu.margin": 0.25,
-        "sched.scene": "touch"
+        "cpu.margin": 0.6,
+        "sched.scene": "touch",
+        "cpu.latencyTime": 0.0
       },
       "trigger": {
-        "cpu.margin": 0.3,
-        "sched.scene": "touch"
+        "cpu.margin": 0.7,
+        "sched.scene": "touch",
+        "cpu.latencyTime": 0.0
       },
       "gesture": {
-        "cpu.margin": 0.3,
-        "sched.scene": "touch"
+        "cpu.margin": 0.7,
+        "sched.scene": "touch",
+        "cpu.latencyTime": 0.0
       },
       "junk": {
-        "cpu.margin": 0.2,
-        "sched.scene": "touch"
+        "cpu.margin": 0.5,
+        "sched.scene": "touch",
+        "cpu.latencyTime": 0.0
       },
       "switch": {
         "cpu.margin": 0.7,
@@ -508,20 +512,24 @@
         "sched.scene": "idle"
       },
       "touch": {
-        "cpu.margin": 0.1,
-        "sched.scene": "touch"
+        "cpu.margin": 0.6,
+        "sched.scene": "touch",
+        "cpu.latencyTime": 0.0
       },
       "trigger": {
-        "cpu.margin": 0.1,
-        "sched.scene": "touch"
+        "cpu.margin": 0.7,
+        "sched.scene": "touch",
+        "cpu.latencyTime": 0.0
       },
       "gesture": {
-        "cpu.margin": 0.1,
-        "sched.scene": "touch"
+        "cpu.margin": 0.7,
+        "sched.scene": "touch",
+        "cpu.latencyTime": 0.0
       },
       "junk": {
-        "cpu.margin": 0.1,
-        "sched.scene": "touch"
+        "cpu.margin": 0.5,
+        "sched.scene": "touch",
+        "cpu.latencyTime": 0.0
       },
       "switch": {
         "sched.scene": "boost"
