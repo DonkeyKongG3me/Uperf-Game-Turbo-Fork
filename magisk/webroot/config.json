@@ -1,0 +1,6 @@
+{
+  "title": "Uperf Game Turbo 1.21",
+  "permissions": [
+    "android.permission.QUERY_ALL_PACKAGES"
+  ]
+}
