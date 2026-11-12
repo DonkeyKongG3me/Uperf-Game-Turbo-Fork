@@ -21,18 +21,18 @@
 
  ### Why do I need yet another performance module?
  
-- **Good question.** This module is designed to activate performance profiles **only for apps you assigned**, meaning you don't need to remove it after one use, as the stock performance returns as soon as you leave a boosted app.
+- **Good question.** This module is designed to activate performance profiles **only for apps you assign** so you don't have to remove it after one use. Stock performance returns as soon as you leave a boosted app.
  
  
  ### Is my device supported?
  
-- **Most likely.** The module uses the original **Uperf-Game-Turbo's 118 CPU configs** (***with a little tweaks from my end***), so it's possible that your device is supported.
+- **Most likely.** The module uses the original **Uperf-Game-Turbo's 118 CPU configs** (***with a little tweaks from my end***), so there's a high chance that your device is supported.
 
 - **See the full supported CPU list here:** https://pastebin.com/YdXKdBuk
  
  ### Good to know:
  
-- The installation script automatically checks if your device is supported. Sometimes, an **incorrect profile may be assigned to your device,** so **check what config was applied before rebooting!**
+- The installation script automatically checks if your device is supported. Sometimes, an **incorrect profile may be assigned to your device.** **Check what config was applied before rebooting!**
  
  ### Is it open source?
  
@@ -116,7 +116,7 @@ You need to install [WebUI X](https://github.com/MMRLApp/WebUI-X-Portable/releas
 
 ---
 
-### How to install:
+### 📩 How to install:
 
 1. Download from the latest release.
 2. Open your root manager and flash the module.
@@ -125,6 +125,6 @@ You need to install [WebUI X](https://github.com/MMRLApp/WebUI-X-Portable/releas
 5. Choose the apps you want to boost.
 6. Done!
 
-## Licenses:
+## ⚖️ Licenses:
 
 Distributed under the same license as the upstream projects. See [LICENSE](LICENSE) and the notices in the Credits section.
