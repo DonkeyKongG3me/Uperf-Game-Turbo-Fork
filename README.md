@@ -17,30 +17,31 @@
 
  **Uperf Game Turbo** is a **revolutionary Magisk/APatch/KernelSU module** that offers **4 performance profiles that apply in select apps or your entire device**. It can dramatically improve the **speed and responsiveness of your device**, or improve the **battery life** if you decide to use efficient presets.
  
- ## QNA:
+ ## 💬 QNA:
 
- ### Why do I need yet another performance module?
+ ### Q: Why do I need yet another performance module?
  
-- **Good question.** This module is designed to activate performance profiles **only for apps you assign** so you don't have to remove it after one use. Stock performance returns as soon as you leave a boosted app.
+- **A: Good question.** This module is designed to activate its profiles **only for apps you choose.** This means that you don't have to remove it after one use like other performance modules, as stock performance returns as soon as you leave a boosted app.
  
+ ### Q: Is my device supported?
  
- ### Is my device supported?
- 
-- **Most likely.** The module uses the original **Uperf-Game-Turbo's 118 CPU configs** (***with a little tweaks from my end***), so there's a high chance that your device is supported.
+- **A: Most likely.** The module uses the original **Uperf-Game-Turbo's 118 CPU configs** (***with a little tweaks from my end***), so there's a chance that your device is supported.
 
 - **See the full supported CPU list here:** https://pastebin.com/YdXKdBuk
+
+---
  
  ### Good to know:
  
-- The installation script automatically checks if your device is supported. Sometimes, an **incorrect profile may be assigned to your device.** **Check what config was applied before rebooting!**
+- The installation script automatically detects if your device is supported. Sometimes, an **incorrect profile can be assigned to your device.** **Check what config was applied before rebooting!**
  
  ### Is it open source?
  
-- Yes, **the entire module is open source.** Download the release you want to check and inspect the contents inside. Note that **some files come from the original uperf module,** which **may not be open source!**
+- Yes, **the entire module is open source.** You can freely download ***any release you want*** and check the contents inside. Note that **some files originate from the original uperf module,** which **may not be fully open source!**
 
 ---
 
-### **Features:**
+### 🎯 Features:
 
 - **Performance profiles** that each app can use based on your choice.
 
