@@ -27,7 +27,13 @@ clear_log() {
     true >"$LOG_FILE"
 }
 glog() {
-    echo "$(date '+%m-%d %H:%M:%S') $1" >>"$GAME_LOG"
+    local t
+    t="$(date '+%m-%d %H:%M:%S.%N' 2>/dev/null)"
+    case "$t" in
+    *[!0-9.\ :-]* | "") t="$(date '+%m-%d %H:%M:%S')" ;;
+    *) t="${t%??????}" ;;
+    esac
+    echo "$t $1" >>"$GAME_LOG"
 }
 glog_trim() {
     if [ -f "$GAME_LOG" ] && [ "$(wc -l <"$GAME_LOG")" -gt 400 ]; then

@@ -7,6 +7,7 @@ BASEDIR="$(dirname "$(readlink -f "$0")")"
 . "$BASEDIR/libtweaks.sh"
 . "$BASEDIR/libconf.sh"
 . "$BASEDIR/libbattemp.sh"
+. "$BASEDIR/libscreen.sh"
 PIDFILE="$STATE_DIR/daemon.pid"
 APP_LIST=""
 TARGET_PKGS=""
@@ -28,12 +29,32 @@ AWAY=0
 TICK=0
 RESTARTS=0
 RELOAD_FLAG="$STATE_DIR/reload"
+LAUNCH_FLAG="$STATE_DIR/launch"
+DEV_KEY="@device"
+DEVICE=""
+SCR_KEY="@screenoff"
+SCREEN_OFF=""
+BRIDGE="balance"
+LAUNCH_SIG=0
+LAUNCH_PKG=""
+NAP_PID=""
+FAST_DEV=0
+PEND=0
 load_conf() {
     local key val w pkg rest pre fl bt list="" pkgs="" fmt=1
-    [ -f "$CONF_FILE" ] || write_conf "" 5 2
+    if [ ! -f "$CONF_FILE" ]; then
+        if restore_conf; then
+            glog "boost.conf was missing (module removed instead of updated, or a cleaner?), restored your last saved settings"
+        else
+            write_conf "" 5 2
+        fi
+    fi
+    cmp -s "$CONF_FILE" "$CONF_BACKUP" 2>/dev/null || cp -f "$CONF_FILE" "$CONF_BACKUP" 2>/dev/null
     grep -q '^FORMAT=2' "$CONF_FILE" && fmt=2
     APP_LIST=""
     TARGET_PKGS=""
+    DEVICE=""
+    SCREEN_OFF=""
     BAT_TEMP=0
     BAT_TEMP_ON=""
     BAT_TEMP_CHG=0
@@ -54,11 +75,17 @@ load_conf() {
                 valid_btfield "$bt" || bt=""
                 case "$pkg" in "" | *[!A-Za-z0-9._]*) continue ;; esac
                 valid_preset "$pre" || pre="fast"
-                case "$fl" in [01][01][01]) ;; [01][01]) fl="${fl}0" ;; *) fl="1$(default_h "$pre")0" ;; esac
+                case "$fl" in [01][01][01]) ;; [01][01]) fl="${fl}0" ;; *) fl="$(default_h "$pre")$(default_h "$pre")0" ;; esac
                 [ "$fmt" = 2 ] || fl="1$(case "$pre" in performance | fast) echo "${fl#?}" ;; *) echo 00 ;; esac)"
                 list="$list $pkg:$pre:$fl${bt:+:$bt}"
                 pkgs="$pkgs $pkg"
             done
+            ;;
+        DEVICE)
+            DEVICE="$(clean_device "$val")"
+            ;;
+        SCREEN_OFF)
+            SCREEN_OFF="$(clean_screenoff "$val")"
             ;;
         EXIT_DELAY | POLL_IDLE)
             case "$val" in "" | *[!0-9]*) ;; *) eval "$key=$val" ;; esac
@@ -74,6 +101,10 @@ load_conf() {
             ;;
         esac
     done <"$CONF_FILE"
+    if [ -n "$DEVICE" ]; then
+        list="$DEV_KEY:$DEVICE"
+        pkgs=""
+    fi
     APP_LIST="${list# }"
     [ "$BAT_TEMP_ON" = 0 ] && BAT_TEMP=0
     TARGET_PKGS="${pkgs# }"
@@ -83,6 +114,14 @@ load_conf() {
 }
 preset_for() {
     local e
+    if [ "$1" = "$SCR_KEY" ]; then
+        REPLY="so_${SCREEN_OFF:-powersave}"
+        REPLY_FL=000
+        REPLY_BT=0
+        has_preset "$REPLY" || REPLY="${SCREEN_OFF:-powersave}"
+        has_preset "$REPLY" || REPLY="powersave"
+        return
+    fi
     REPLY="fast"
     REPLY_FL=110
     REPLY_BT=""
@@ -124,6 +163,47 @@ session_for() {
         ;;
     esac
 }
+ensure_uperf_json() {
+    [ -f "$USER_PATH_RAW/uperf.json" ] && return 0
+    [ -f "$MODULE_PATH/uperf_default.json" ] || return 1
+    mkdir -p "$USER_PATH_RAW"
+    cp -f "$MODULE_PATH/uperf_default.json" "$USER_PATH_RAW/uperf.json" || return 1
+    glog "uperf.json was missing (module removed instead of updated, or a cleaner?), restored it from the module"
+}
+lift_screen_off() {
+    has_preset "$BRIDGE" && [ -n "$(UPERF_PIDS)" ] || return 1
+    printf '%s\n' "* $BRIDGE" "- $BRIDGE" >"$USER_PATH/perapp_powermode.txt"
+    echo "$BRIDGE" >"$USER_PATH/cur_powermode.txt"
+    echo "$BRIDGE" >"$STATE_DIR/preset"
+}
+has_preset() {
+    [ -f "$USER_PATH_RAW/uperf.json" ] || return 1
+    grep -q "\"$1\"" "$USER_PATH_RAW/uperf.json"
+}
+apply_rules() {
+    printf '%s\n' "* $PRESET" "- $PRESET" >"$USER_PATH/perapp_powermode.txt"
+    echo "$PRESET" >"$STATE_DIR/preset"
+    echo "$PRESET" >"$USER_PATH/cur_powermode.txt"
+}
+sname() {
+    case "$1" in
+    "$DEV_KEY") echo "this device" ;;
+    "$SCR_KEY") echo "screen off" ;;
+    *) echo "${1:-game}" ;;
+    esac
+}
+nap() {
+    [ "$LAUNCH_SIG" = 1 ] && return 0
+    sleep "$1" &
+    NAP_PID=$!
+    [ "$LAUNCH_SIG" = 1 ] || wait "$NAP_PID" 2>/dev/null
+    kill "$NAP_PID" 2>/dev/null
+    NAP_PID=""
+}
+on_usr1() {
+    LAUNCH_SIG=1
+    [ -n "$NAP_PID" ] && kill "$NAP_PID" 2>/dev/null
+}
 is_target() {
     [ -n "$1" ] || return 1
     case " $TARGET_PKGS " in
@@ -138,6 +218,7 @@ fg_adj() {
 }
 find_target_fg() {
     local pid c pkg cs procs=/dev/cpuset/top-app/cgroup.procs
+    [ -n "$TARGET_PKGS" ] || return 1
     if [ -r "$procs" ]; then
         while read -r pid; do
             c=""
@@ -170,6 +251,7 @@ screen_on() {
     case "$w" in
     *Asleep* | *Dozing*) return 1 ;;
     esac
+    probe_note_on
     return 0
 }
 game_state() {
@@ -211,8 +293,9 @@ enter_game() {
     TICK=0
     RESTARTS=0
     t0="$(date +%s)"
+    ensure_uperf_json
     if [ ! -f "$USER_PATH_RAW/uperf.json" ]; then
-        glog "ERROR: $USER_PATH/uperf.json missing, reinstall the module. Not boosting $GPKG."
+        glog "ERROR: $USER_PATH/uperf.json missing, reinstall the module. Not boosting $(sname "$GPKG")."
         GSKIP=1
         return
     fi
@@ -221,7 +304,7 @@ enter_game() {
     echo "$GPID $GPKG" >"$ACTIVE_FLAG"
     true >"$STATE_DIR/had_session"
     clear_log
-    log "$(date '+%H:%M:%S') enter $GPKG pid=$GPID preset=$PRESET tier=$TIER thermal_unlock=$UNLOCK_THERMAL battery_limit_off=$UNLOCK_BATOC uperf_touch=$UPERF_TOUCH baseline=$([ -s "$BASELINE" ] && echo yes || echo no)"
+    log "$(date '+%H:%M:%S') enter $(sname "$GPKG") pid=$GPID preset=$PRESET tier=$TIER thermal_unlock=$UNLOCK_THERMAL battery_limit_off=$UNLOCK_BATOC uperf_touch=$UPERF_TOUCH baseline=$([ -s "$BASELINE" ] && echo yes || echo no)"
     if uperf_sched_enabled; then
         PROC_TABLE="$(proc_table)"
         home="$(home_package)"
@@ -242,35 +325,45 @@ enter_game() {
         glog "uperf failed to start (see uperf_log.txt)"
     fi
     bt_set "$ENTER_BT" "$ENTER_BT_CHG"
-    glog "enter $GPKG: preset $PRESET on, battery temp $(bt_desc), thermal limits $([ "$UNLOCK_THERMAL" = 1 ] && echo OFF || echo stock), battery limits $([ "$UNLOCK_BATOC" = 1 ] && echo OFF || echo stock), uperf touch boost $([ "$UPERF_TOUCH" = 1 ] && echo on || echo off) ($(($(date +%s) - t0)) s)"
+    glog "enter $(sname "$GPKG"): preset $PRESET on, battery temp $(bt_desc), thermal limits $([ "$UNLOCK_THERMAL" = 1 ] && echo OFF || echo stock), battery limits $([ "$UNLOCK_BATOC" = 1 ] && echo OFF || echo stock), uperf touch boost $([ "$UPERF_TOUCH" = 1 ] && echo on || echo off) ($(($(date +%s) - t0)) s)"
 }
 switch_app() {
     local old="$GPKG" oldtier="$TIER"
     session_for "$2"
     if [ "$NEW_SIG" != "$SIG" ]; then
         TIER="$oldtier"
-        leave_game "switching to $2"
+        leave_game "switching to $(sname "$2")"
         return 0
     fi
     GPID="$1"
     GPKG="$2"
-    if [ "$REPLY" != "$PRESET" ]; then
-        PRESET="$REPLY"
-        echo "$PRESET" >"$USER_PATH/cur_powermode.txt"
-    fi
+    PRESET="$REPLY"
+    TICK=0
+    apply_rules
     echo "$GPID $GPKG" >"$ACTIVE_FLAG"
     [ "$PAUSED" = 1 ] && uperf_resume
     PAUSED=0
     AWAY=0
     bt_set "$NEW_BT" "$NEW_BT_CHG"
-    glog "switch $old -> $GPKG: preset $PRESET, battery temp $(bt_desc)"
+    glog "switch $(sname "$old") -> $(sname "$GPKG"): preset $PRESET, battery temp $(bt_desc)"
 }
 apply_reload() {
     rm -f "$RELOAD_FLAG"
+    [ -z "$GPID" ] && FAST_DEV=1
     load_conf
-    glog "settings reloaded: ${APP_LIST:-no apps selected}"
+    glog "settings reloaded: ${APP_LIST:-no apps selected}, screen off: ${SCREEN_OFF:-stock}"
     [ -n "$GPID" ] || return 0
-    if ! is_target "$GPKG"; then
+    if [ "$GPKG" = "$DEV_KEY" ]; then
+        if [ -z "$DEVICE" ]; then
+            leave_game "device mode switched off"
+            return 0
+        fi
+    elif [ "$GPKG" = "$SCR_KEY" ]; then
+        if [ -z "$SCREEN_OFF" ]; then
+            leave_game "screen off mode switched off"
+            return 0
+        fi
+    elif ! is_target "$GPKG"; then
         leave_game "removed from the list"
         return 0
     fi
@@ -283,12 +376,12 @@ apply_reload() {
     fi
     if [ "$REPLY" != "$PRESET" ]; then
         PRESET="$REPLY"
-        echo "$PRESET" >"$USER_PATH/cur_powermode.txt"
-        glog "$GPKG: preset changed to $PRESET"
+        glog "$(sname "$GPKG"): preset changed to $PRESET"
     fi
+    apply_rules
     if [ "$NEW_BT" != "$BT_CUR" ] || [ "$NEW_BT_CHG" != "$BT_CHG_CUR" ]; then
         bt_set "$NEW_BT" "$NEW_BT_CHG"
-        glog "$GPKG: battery temp $(bt_desc)"
+        glog "$(sname "$GPKG"): battery temp $(bt_desc)"
     fi
 }
 take_baseline() {
@@ -311,11 +404,12 @@ baseline_due() {
 }
 park_idle() {
     [ -f "$RELOAD_FLAG" ] && return 0
-    glog "no apps boosted: watcher paused until one is"
+    glog "nothing boosted: watcher paused until an app, this device or screen off mode is set"
     sleep 3600 &
     echo $! >"$STATE_DIR/park_pid"
     [ -f "$RELOAD_FLAG" ] && kill $! 2>/dev/null
     wait $! 2>/dev/null
+    kill $! 2>/dev/null
     rm -f "$STATE_DIR/park_pid"
 }
 leave_game() {
@@ -337,9 +431,9 @@ leave_game() {
     killall mi_thermald 2>/dev/null
     rm -f "$ACTIVE_FLAG"
     if grep -q 'verify: every node back' "$LOG_FILE" 2>/dev/null; then
-        glog "leave ${GPKG:-game} ($1): stock restored, verified ($(($(date +%s) - t0)) s)"
+        glog "leave $(sname "$GPKG") ($1): stock restored, verified ($(($(date +%s) - t0)) s)"
     else
-        glog "leave ${GPKG:-game} ($1): stock restored, see apply.log ($(($(date +%s) - t0)) s)"
+        glog "leave $(sname "$GPKG") ($1): stock restored, see apply.log ($(($(date +%s) - t0)) s)"
     fi
     GPID=""
     GPKG=""
@@ -375,12 +469,148 @@ reset_stock() {
     fi
 }
 on_term() {
+    rm -f "$STATE_DIR/launch_ok" "$LAUNCH_FLAG"
     [ -f "$STATE_DIR/park_pid" ] && kill "$(cat "$STATE_DIR/park_pid")" 2>/dev/null && rm -f "$STATE_DIR/park_pid"
     if [ -f "$ACTIVE_FLAG" ]; then
         leave_game "watcher stopped"
     fi
     rm -f "$PIDFILE"
     exit 0
+}
+device_ready() {
+    [ -n "$DEVICE" ] || return 1
+    if [ "$FAST_DEV" = 1 ]; then
+        FAST_DEV=0
+    else
+        screen_on || return 1
+    fi
+    if [ ! -s "$BASELINE" ] && [ ! -f "$STATE_DIR/had_session" ]; then
+        baseline_due || return 1
+        take_baseline
+    fi
+    return 0
+}
+device_tick() {
+    TICK=$((TICK + 1))
+    if [ $((TICK % 3)) -eq 0 ] && ! screen_on; then
+        screen_went_off
+        return
+    fi
+    if [ "$GSKIP" = 0 ] && [ "$RESTARTS" -lt 3 ] && [ $((TICK % 5)) -eq 0 ] && [ -z "$(UPERF_PIDS)" ]; then
+        RESTARTS=$((RESTARTS + 1))
+        glog "uperf not running, restarting it ($RESTARTS/3)"
+        uperf_start "$PRESET" >>"$LOG_FILE" 2>&1
+    fi
+    nap 1
+}
+scr_ready() {
+    [ -n "$SCREEN_OFF" ] || return 1
+    [ -s "$BASELINE" ] || [ -f "$STATE_DIR/had_session" ]
+}
+enter_screen_off() {
+    [ -n "$GPID" ] && switch_app scr "$SCR_KEY"
+    [ -n "$GPID" ] || enter_game scr "$SCR_KEY"
+    probe_arm
+}
+screen_went_off() {
+    if scr_ready; then
+        enter_screen_off
+    else
+        leave_game "screen off"
+    fi
+}
+screen_back_on() {
+    if [ "$PROBE_LIFTED" = 1 ]; then
+        PROBE_LIFTED=0
+        sleep 0.2
+    elif lift_screen_off; then
+        sleep 0.3
+    fi
+    glog "screen on: left $PRESET"
+    if find_target_fg; then
+        switch_app "$FG_PID" "$FG_PKG"
+        [ -n "$GPID" ] || enter_game "$FG_PID" "$FG_PKG"
+    elif [ -n "$DEVICE" ]; then
+        switch_app dev "$DEV_KEY"
+        [ -n "$GPID" ] || enter_game dev "$DEV_KEY"
+    else
+        leave_game "screen on"
+    fi
+}
+uperf_watchdog() {
+    if [ "$GSKIP" = 0 ] && [ "$RESTARTS" -lt 3 ] && [ -z "$(UPERF_PIDS)" ]; then
+        RESTARTS=$((RESTARTS + 1))
+        glog "uperf not running, restarting it ($RESTARTS/3)"
+        uperf_start "$PRESET" >>"$LOG_FILE" 2>&1
+    fi
+}
+screen_off_tick() {
+    TICK=$((TICK + 1))
+    if [ "$PROBE_ACTIVE" = 1 ]; then
+        probe_tick && return
+        if [ $((TICK % PROBE_BACKUP)) -eq 0 ]; then
+            if screen_on; then
+                glog "screen on: found by the 6 s backup dumpsys check"
+                screen_back_on
+                probe_missed
+                return
+            fi
+            uperf_watchdog
+        fi
+        nap "$PROBE_STEP"
+        return
+    fi
+    if screen_on; then
+        glog "screen on: found by the regular dumpsys check (every ${POLL_IDLE} s)"
+        screen_back_on
+        return
+    fi
+    if [ "$GSKIP" = 0 ] && [ "$RESTARTS" -lt 3 ] && [ $((TICK % 5)) -eq 0 ] && [ -z "$(UPERF_PIDS)" ]; then
+        RESTARTS=$((RESTARTS + 1))
+        glog "uperf not running, restarting it ($RESTARTS/3)"
+        uperf_start "$PRESET" >>"$LOG_FILE" 2>&1
+    fi
+    nap "$POLL_IDLE"
+}
+take_launch() {
+    local pkg="" t="" now
+    [ -f "$LAUNCH_FLAG" ] || return 1
+    read -r pkg t <"$LAUNCH_FLAG"
+    rm -f "$LAUNCH_FLAG"
+    case "$t" in "" | *[!0-9]*) return 1 ;; esac
+    now="$(date +%s)"
+    [ $((now - t)) -le 15 ] || return 1
+    is_target "$pkg" || return 1
+    [ "$pkg" = "$GPKG" ] && return 1
+    LAUNCH_PKG="$pkg"
+    return 0
+}
+launch_boost() {
+    PEND=20
+    glog "launch $1 from the settings: applying its mode now"
+    if [ -n "$GPID" ]; then
+        switch_app wait "$1"
+        [ -n "$GPID" ] && return 0
+    fi
+    enter_game wait "$1"
+}
+launch_tick() {
+    if find_target_fg; then
+        if [ "$FG_PKG" = "$GPKG" ]; then
+            GPID="$FG_PID"
+            echo "$GPID $GPKG" >"$ACTIVE_FLAG"
+            glog "$GPKG is open (pid $GPID)"
+        else
+            switch_app "$FG_PID" "$FG_PKG"
+        fi
+        return
+    fi
+    PEND=$((PEND - 1))
+    if [ "$PEND" -le 0 ]; then
+        leave_game "launched app never came to the front"
+        return
+    fi
+    nap 1
 }
 main() {
     local old n=0 st
@@ -393,8 +623,12 @@ main() {
     fi
     echo "$$" >"$PIDFILE"
     trap on_term TERM INT HUP
+    trap on_usr1 USR1
+    true >"$STATE_DIR/launch_ok"
     load_conf
     glog_trim
+    ensure_uperf_json
+    probe_init
     bt_stop
     if [ -f "$ACTIVE_FLAG" ]; then
         read -r GPID GPKG <"$ACTIVE_FLAG"
@@ -404,12 +638,19 @@ main() {
         st="$(fix_cpu_governors)"
         [ -n "$st" ] && glog "governor left on powersave by an earlier run, fixed: $st"
     fi
-    rm -f "$RELOAD_FLAG"
-    glog "watcher started, apps: ${APP_LIST:-none selected yet}"
+    rm -f "$RELOAD_FLAG" "$LAUNCH_FLAG"
+    glog "watcher started, apps: ${APP_LIST:-none selected yet}, screen off: ${SCREEN_OFF:-stock}"
     while true; do
         [ -f "$RELOAD_FLAG" ] && apply_reload
+        if [ "$LAUNCH_SIG" = 1 ] || [ -f "$LAUNCH_FLAG" ]; then
+            LAUNCH_SIG=0
+            if take_launch; then
+                launch_boost "$LAUNCH_PKG"
+                continue
+            fi
+        fi
         if [ -z "$GPID" ]; then
-            if [ -z "$TARGET_PKGS" ] && { [ -s "$BASELINE" ] || [ -f "$STATE_DIR/had_session" ]; }; then
+            if [ -z "$TARGET_PKGS" ] && [ -z "$DEVICE" ] && [ -z "$SCREEN_OFF" ] && { [ -s "$BASELINE" ] || [ -f "$STATE_DIR/had_session" ]; }; then
                 park_idle
                 continue
             fi
@@ -418,14 +659,34 @@ main() {
                 n=0
                 load_conf
             fi
-            if find_target_fg; then
+            if scr_ready && ! screen_on; then
+                enter_screen_off
+                continue
+            fi
+            if find_target_fg && screen_on; then
                 enter_game "$FG_PID" "$FG_PKG"
+                continue
+            fi
+            if device_ready; then
+                enter_game dev "$DEV_KEY"
                 continue
             fi
             if [ $((n % 5)) -eq 0 ] && baseline_due; then
                 take_baseline
             fi
-            sleep "$POLL_IDLE"
+            nap "$POLL_IDLE"
+            continue
+        fi
+        if [ "$GPKG" = "$DEV_KEY" ]; then
+            device_tick
+            continue
+        fi
+        if [ "$GPKG" = "$SCR_KEY" ]; then
+            screen_off_tick
+            continue
+        fi
+        if [ "$GPID" = wait ]; then
+            launch_tick
             continue
         fi
         game_state
@@ -435,7 +696,7 @@ main() {
                 GPID=""
                 GPKG=""
             fi
-            sleep 2
+            nap 2
             continue
         fi
         case $st in
@@ -454,7 +715,12 @@ main() {
         1)
             if find_target_fg && [ "$FG_PID" != "$GPID" ]; then
                 switch_app "$FG_PID" "$FG_PKG"
-                sleep 1
+                nap 1
+                continue
+            fi
+            if [ $((AWAY % 3)) -eq 1 ] && scr_ready && ! screen_on; then
+                screen_went_off
+                nap 1
                 continue
             fi
             if [ "$PAUSED" = 0 ]; then
@@ -471,9 +737,9 @@ main() {
                 leave_game "closed"
             fi
             ;;
-        3) leave_game "screen off" ;;
+        3) screen_went_off ;;
         esac
-        sleep 1
+        nap 1
     done
 }
 if [ "$1" = "--reset" ]; then

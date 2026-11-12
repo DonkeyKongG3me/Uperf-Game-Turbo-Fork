@@ -29,11 +29,31 @@ clean_apps() {
         valid_btfield "$bt" || bt=""
         case "$pkg" in "" | *[!A-Za-z0-9._]*) continue ;; esac
         valid_preset "$pre" || continue
-        case "$fl" in [01][01][01]) ;; [01][01]) fl="${fl}0" ;; *) fl="1$(default_h "$pre")0" ;; esac
+        case "$fl" in [01][01][01]) ;; [01][01]) fl="${fl}0" ;; *) fl="$(default_h "$pre")$(default_h "$pre")0" ;; esac
         case " $out " in *" $pkg:"*) continue ;; esac
         out="$out $pkg:$pre:$fl${bt:+:$bt}"
     done
     echo "${out# }"
+}
+clean_device() {
+    local pre rest fl bt=""
+    case "$1" in "" | - | off) return 0 ;; esac
+    pre="${1%%:*}"
+    rest=""
+    [ "$1" != "$pre" ] && rest="${1#*:}"
+    fl="${rest%%:*}"
+    case "$rest" in *:*) bt="${rest#*:}" ;; esac
+    valid_preset "$pre" || return 0
+    valid_btfield "$bt" || bt=""
+    case "$fl" in [01][01][01]) ;; [01][01]) fl="${fl}0" ;; *) fl="$(default_h "$pre")$(default_h "$pre")0" ;; esac
+    echo "$pre:$fl${bt:+:$bt}"
+}
+clean_screenoff() {
+    case "${1%%:*}" in
+    powersave | balance | performance) echo "${1%%:*}" ;;
+    fast) echo performance ;;
+    esac
+    return 0
 }
 write_conf() {
     mkdir -p "${CONF_FILE%/*}"
@@ -47,6 +67,12 @@ write_conf() {
         echo "#   optional 4th field: own battery temperature in degC (0 = none), gN = use BAT_TEMP,"
         echo "#   a trailing c (25c, g25c) = keep spoofing while charging"
         echo "APPS=$1"
+        echo "# whole-device mode as preset:THB[:temp], used whenever no app above is on screen. - = off"
+        echo "DEVICE=${7:--}"
+        echo "# screen-off mode (powersave, balance, performance). - = off (stock)"
+        echo "#   runs the so_<mode> preset from uperf.json: low power caps, no memory floor, no touch boost,"
+        echo "#   thermal and battery limits stay stock, no temperature spoofing"
+        echo "SCREEN_OFF=${8:--}"
         echo "# seconds a boosted app may sit in the background before stock is restored"
         echo "EXIT_DELAY=$2"
         echo "# seconds between checks while no boosted app is open"
@@ -58,5 +84,12 @@ write_conf() {
         echo "BAT_TEMP_ON=${5:-0}"
         echo "# 1 = keep spoofing the global battery temperature while the phone is charging (unsafe)"
         echo "BAT_TEMP_CHG=${6:-0}"
-    } >"$CONF_FILE.tmp" && mv -f "$CONF_FILE.tmp" "$CONF_FILE"
+    } >"$CONF_FILE.tmp" && mv -f "$CONF_FILE.tmp" "$CONF_FILE" || return 1
+    cp -f "$CONF_FILE" "$CONF_BACKUP" 2>/dev/null
+    return 0
+}
+restore_conf() {
+    [ -s "$CONF_BACKUP" ] || return 1
+    mkdir -p "${CONF_FILE%/*}"
+    cp -f "$CONF_BACKUP" "$CONF_FILE" || return 1
 }

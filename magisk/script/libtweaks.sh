@@ -397,6 +397,7 @@ uperf_start() {
     lock_val "1048576" /proc/sys/fs/inotify/max_user_watches
     lock_val "1024" /proc/sys/fs/inotify/max_user_instances
     printf '%s\n' "* $1" "- $1" >"$USER_PATH/perapp_powermode.txt"
+    echo "$1" >"$STATE_DIR/preset"
     echo "$1" >"$USER_PATH/cur_powermode.txt"
     cfg="$USER_PATH/uperf.json"
     if [ "$UPERF_TOUCH" = "0" ]; then

@@ -11,6 +11,12 @@ BB="$BIN_PATH/busybox/busybox"
 RS="$(printf '\036')"
 UI_DIR="/data/adb/uperf_ui"
 UI_FILE="$UI_DIR/ui.json"
+cur_preset() {
+    local p=""
+    [ -s "$STATE_DIR/preset" ] && read -r p <"$STATE_DIR/preset"
+    [ -n "$p" ] || read -r p 2>/dev/null <"$USER_PATH_RAW/cur_powermode.txt"
+    echo "$p"
+}
 daemon_pid() {
     local p
     p="$(cat "$PIDFILE" 2>/dev/null)"
@@ -40,7 +46,12 @@ do_status() {
     if [ -n "$p" ]; then echo "watcher : running (pid $p)"; else echo "watcher : NOT running"; fi
     if [ -f "$STATE_DIR/active" ]; then
         a="$(cat "$STATE_DIR/active")"
-        echo "state   : BOOSTED for ${a#* } (pid ${a%% *})"
+        case "$a" in
+        "dev @device") echo "state   : BOOSTED device-wide (This Device)" ;;
+        "scr @screenoff") echo "state   : SCREEN OFF mode ($(cur_preset))" ;;
+        "wait "*) echo "state   : BOOSTED for ${a#* } (launched from the settings, waiting for it to open)" ;;
+        *) echo "state   : BOOSTED for ${a#* } (pid ${a%% *})" ;;
+        esac
     else
         echo "state   : stock (no boosted app on screen)"
     fi
@@ -79,6 +90,14 @@ do_dump() {
         echo "# state dump $(date '+%Y-%m-%d %H:%M:%S'), uptime $(cut -d' ' -f1 /proc/uptime)s"
         echo "# $(getprop ro.product.model) / $(getprop ro.board.platform) / Android $(getprop ro.build.version.release)"
         do_status
+        echo
+        echo "## screen probe (fast unlock detection)"
+        cat "$STATE_DIR/probe.txt" 2>/dev/null || echo "not armed yet (arms at the first Screen Off session)"
+        echo "candidates now:"
+        while read -r p; do
+            echo "  $p = $(cat "$p" 2>/dev/null)"
+        done <"$STATE_DIR/probe_cands" 2>/dev/null
+        [ -s "$STATE_DIR/probe_miss" ] && echo "missed unlocks this boot (2 = not used again): $(sort "$STATE_DIR/probe_miss" | uniq -c | awk '{ printf "%s x%s  ", $2, $1 }')"
         echo
         show "cpu online" /sys/devices/system/cpu/cpu[0-9]*/online
         for p in /sys/devices/system/cpu/cpufreq/policy*; do
@@ -149,7 +168,7 @@ do_state() {
     if [ -n "$(daemon_pid)" ]; then echo "daemon=running"; else echo "daemon=stopped"; fi
     a="$(cat "$STATE_DIR/active" 2>/dev/null)"
     echo "active=${a#* }"
-    echo "preset=$(cat "$USER_PATH_RAW/cur_powermode.txt" 2>/dev/null)"
+    echo "preset=$(cur_preset)"
     echo "uperf=$(pidof uperf 2>/dev/null)"
     echo "baseline=$(wc -l <"$BASELINE" 2>/dev/null)"
     echo "soc=$(getprop ro.soc.model)"
@@ -193,7 +212,7 @@ do_getconf() {
     fi
 }
 do_setconf() {
-    local apps ed pi bt bon bchg
+    local apps ed pi bt bon bchg dev scr dp gt
     apps="$(clean_apps "$1")"
     case "$2" in "" | *[!0-9]*) ed=5 ;; *) ed="$2" ;; esac
     case "$3" in "" | *[!0-9]*) pi=2 ;; *) pi="$3" ;; esac
@@ -214,10 +233,67 @@ do_setconf() {
         [ -n "$bchg" ] || bchg=0
         ;;
     esac
-    write_conf "$apps" "$ed" "$pi" "$bt" "$bon" "$bchg" || { echo "error: could not write $CONF_FILE"; return 1; }
+    if [ -n "$7" ]; then
+        dev="$(clean_device "$7")"
+    else
+        dev="$(clean_device "$(sed -n 's/^DEVICE=//p' "$CONF_FILE" 2>/dev/null | head -n1 | tr -d ' \r')")"
+    fi
+    if [ -n "$8" ]; then
+        scr="$(clean_screenoff "$8")"
+    else
+        scr="$(clean_screenoff "$(sed -n 's/^SCREEN_OFF=//p' "$CONF_FILE" 2>/dev/null | head -n1 | tr -d ' \r')")"
+    fi
+    write_conf "$apps" "$ed" "$pi" "$bt" "$bon" "$bchg" "$dev" "$scr" || { echo "error: could not write $CONF_FILE"; return 1; }
     mkdir -p "$STATE_DIR"
     true >"$STATE_DIR/reload"
     [ -f "$STATE_DIR/park_pid" ] && kill "$(cat "$STATE_DIR/park_pid")" 2>/dev/null
+    dp="$(daemon_pid)"
+    [ -n "$dp" ] && [ -f "$STATE_DIR/launch_ok" ] && kill -USR1 "$dp" 2>/dev/null
+    gt="$(date '+%m-%d %H:%M:%S.%N' 2>/dev/null)"
+    case "$gt" in
+    *[!0-9.\ :-]* | "") gt="$(date '+%m-%d %H:%M:%S')" ;;
+    *) gt="${gt%??????}" ;;
+    esac
+    echo "$gt settings saved, watcher notified" >>"$GAME_LOG" 2>/dev/null
+    echo "ok"
+}
+launch_comp() {
+    local c
+    c="$(cmd package resolve-activity --brief -a android.intent.action.MAIN -c android.intent.category.LAUNCHER "$1" 2>/dev/null | tr -d '\r' | tail -n 1)"
+    c="$(echo "$c" | tr -d ' \t')"
+    case "$c" in "$1"/?*) echo "$c"; return 0 ;; esac
+    return 1
+}
+do_launchable() {
+    if [ -n "$1" ]; then
+        case "$1" in *[!A-Za-z0-9._]*) return 1 ;; esac
+        launch_comp "$1"
+        return
+    fi
+    cmd package query-activities --components -a android.intent.action.MAIN -c android.intent.category.LAUNCHER 2>/dev/null |
+        tr -d '\r' | sed -n 's/^[[:space:]]*\([A-Za-z0-9._]*\/[^[:space:]]*\)[[:space:]]*$/\1/p'
+}
+do_launch() {
+    local pkg="$1" comp out p
+    case "$pkg" in "" | *[!A-Za-z0-9._]*) echo "error: bad package name"; return 1 ;; esac
+    comp="$(launch_comp "$pkg")"
+    if [ -z "$comp" ]; then
+        echo "error: $pkg has no launchable screen"
+        return 1
+    fi
+    p="$(daemon_pid)"
+    if [ -n "$p" ] && [ -f "$STATE_DIR/launch_ok" ]; then
+        echo "$pkg $(date +%s)" >"$STATE_DIR/launch"
+        kill -USR1 "$p" 2>/dev/null
+    fi
+    out="$(am start -n "$comp" -a android.intent.action.MAIN -c android.intent.category.LAUNCHER -f 0x10200000 2>&1)"
+    case "$out" in
+    *Error* | *Exception*)
+        rm -f "$STATE_DIR/launch"
+        echo "error: $(echo "$out" | grep -m1 -E 'Error|Exception')"
+        return 1
+        ;;
+    esac
     echo "ok"
 }
 do_resetstock() {
@@ -252,6 +328,90 @@ do_savelogs() {
     } >"$out" 2>&1
     if [ -s "$out" ]; then echo "written: $out"; else echo "error: could not write $out"; return 1; fi
 }
+FM_DIR="/storage/emulated/0/Android/yc/uperf"
+FM_DOC="content://com.android.externalstorage.documents/document/primary%3AAndroid%2Fyc%2Fuperf"
+FM_KNOWN="com.sec.android.app.myfiles com.mi.android.globalFileexplorer com.android.fileexplorer com.google.android.apps.nbu.files com.coloros.filemanager com.oneplus.filemanager com.huawei.filemanager com.hihonor.filemanager bin.mt.plus bin.mt.plus.canary com.mixplorer com.mixplorer.silver pl.solidexplorer2 me.zhanghai.android.files com.amaze.filemanager com.ghisler.android.TotalCommander com.lonelycatgames.Xplore nextapp.fx com.cxinventor.file.explorer com.speedsoftware.rootexplorer com.estrongs.android.pop com.alphainventor.filemanager"
+fm_start() {
+    local out
+    out="$(am start -f 0x10008000 "$@" --es org.openintents.extra.ABSOLUTE_PATH "$FM_DIR" --eu android.provider.extra.INITIAL_URI "$FM_DOC" --es explorer_path "$FM_DIR" 2>&1)"
+    case "$out" in *Error* | *Exception* | *"does not exist"* | *"brought to the front"*) return 1 ;; esac
+    return 0
+}
+fm_plain() {
+    local out
+    out="$(am start -f 0x10000000 "$@" 2>&1)"
+    case "$out" in *Error* | *Exception* | *"does not exist"*) return 1 ;; esac
+    return 0
+}
+do_fmlist() {
+    local t p installed
+    installed=" $(pm list packages 2>/dev/null | tr -d '\r' | sed 's/^package://' | tr '\n' ' ') "
+    {
+        for t in resource/folder inode/directory; do
+            cmd package query-activities --components -a android.intent.action.VIEW -d "file://$FM_DIR" -t "$t" 2>/dev/null
+        done
+        cmd package query-activities --components -a android.intent.action.VIEW -d "$FM_DOC" -t vnd.android.document/directory 2>/dev/null
+        for p in $FM_KNOWN; do
+            case "$installed" in *" $p "*) echo "$p/" ;; esac
+        done
+    } | tr -d '\r' | sed -n 's/^[[:space:]]*\([A-Za-z0-9._]*\)\/.*$/\1/p' | sort -u
+}
+do_fmopen() {
+    local pkg="$1" f="${2##*/}" t comp out
+    case "$pkg" in "" | *[!A-Za-z0-9._]*) echo "error: bad package name"; return 1 ;; esac
+    mkdir -p "$USER_PATH"
+    case "$f" in uperf_logs_*.txt) [ -f "$USER_PATH_RAW/$f" ] || f="" ;; *) f="" ;; esac
+    case "$pkg" in
+    com.mi.android.globalFileexplorer | com.android.fileexplorer)
+        for t in resource/folder inode/directory; do
+            fm_start -a android.intent.action.VIEW -d "file://$FM_DIR" -t "$t" -p "$pkg" && echo "launched" && return 0
+        done
+        ;;
+    bin.mt.plus | bin.mt.plus.canary)
+        if [ -n "$f" ]; then
+            for t in "-n $pkg/bin.mt.plus.OpenTextActivity" "-p $pkg"; do
+                out="$(am start -f 0x10000000 $t -a android.intent.action.VIEW -d "file://$FM_DIR/$f" -t text/plain 2>&1)"
+                case "$out" in *Error* | *Exception* | *"does not exist"*) ;; *) echo "file"; return 0 ;; esac
+            done
+        fi
+        ;;
+    com.sec.android.app.myfiles)
+        fm_start -a samsung.myfiles.intent.action.LAUNCH_MY_FILES -p "$pkg" --es samsung.myfiles.intent.extra.START_PATH "$FM_DIR" && echo "ok" && return 0
+        ;;
+    com.android.documentsui | com.google.android.documentsui)
+        fm_start -n "$pkg/com.android.documentsui.files.FilesActivity" -a android.intent.action.VIEW -d "$FM_DOC" && echo "ok" && return 0
+        ;;
+    com.google.android.apps.nbu.files)
+        if [ -n "$f" ] && appops get "$pkg" MANAGE_EXTERNAL_STORAGE 2>/dev/null | grep -q "allow"; then
+            fm_plain -n "$pkg/.gateway.txt.TextPreviewGatewayHandler" -a android.intent.action.VIEW -d "file://$FM_DIR/$f" -t text/plain && echo "file" && return 0
+        fi
+        fm_plain -n "$pkg/.gateway.browse.BrowseGatewayHandler" -a android.intent.action.VIEW -d "content://com.android.externalstorage.documents/root/primary" -t vnd.android.document/root && echo "root" && return 0
+        ;;
+    esac
+    for t in resource/folder inode/directory; do
+        fm_start -a android.intent.action.VIEW -d "file://$FM_DIR" -t "$t" -p "$pkg" && echo "ok" && return 0
+    done
+    fm_start -a android.intent.action.VIEW -d "$FM_DOC" -t vnd.android.document/directory -p "$pkg" && echo "ok" && return 0
+    comp="$(launch_comp "$pkg")"
+    if [ -n "$comp" ] && fm_start -n "$comp" -a android.intent.action.MAIN -c android.intent.category.LAUNCHER; then
+        echo "launched"
+        return 0
+    fi
+    echo "error: $pkg could not be opened"
+    return 1
+}
+do_hasshortcut() {
+    case "$1" in "" | *[!A-Za-z0-9._-]*) echo "no"; return 0 ;; esac
+    dumpsys shortcut 2>/dev/null | awk -v id="id=shortcut_$1" '
+        n > 0 { n--; if ($0 ~ /flags=/) { if ($0 ~ /\[[^]]*Pin/) f = 1; n = 0 } }
+        index($0, id) {
+            c = substr($0, index($0, id) + length(id), 1)
+            if (c == "" || c == "," || c == " ") {
+                if ($0 ~ /flags=/) { if ($0 ~ /\[[^]]*Pin/) f = 1 } else n = 4
+            }
+        }
+        END { print (f ? "yes" : "no") }'
+}
 do_uiset() {
     mkdir -p "$UI_DIR"
     echo "$1" | base64 -d >"$UI_FILE.tmp" 2>/dev/null && [ -s "$UI_FILE.tmp" ] && mv -f "$UI_FILE.tmp" "$UI_FILE" && echo ok
@@ -266,8 +426,13 @@ state) do_state ;;
 caps) do_caps ;;
 uperfcfg) cat "$USER_PATH_RAW/uperf.json" 2>/dev/null ;;
 getconf) do_getconf ;;
-setconf) do_setconf "$2" "$3" "$4" "$5" "$6" "$7" ;;
+setconf) do_setconf "$2" "$3" "$4" "$5" "$6" "$7" "$8" "$9" ;;
+launchable) do_launchable "$2" ;;
+launch) do_launch "$2" ;;
 savelogs) do_savelogs ;;
+fmlist) do_fmlist ;;
+fmopen) do_fmopen "$2" "$3" ;;
+hasshortcut) do_hasshortcut "$2" ;;
 resetstock) do_resetstock ;;
 uiget) cat "$UI_FILE" 2>/dev/null ;;
 uiset) do_uiset "$2" ;;
@@ -294,7 +459,7 @@ restart) do_stop; do_start; do_status ;;
 dump) do_dump ;;
 rebaseline)
     if [ -f "$STATE_DIR/active" ]; then
-        echo "leave the game first"
+        echo "leave the boosted app first (with This Device on, switch it off; Screen Off mode ends when the screen is on)"
     else
         rm -f "$BASELINE" "$STATE_DIR/had_session"
         echo "baseline will be re-recorded within ~10 s"

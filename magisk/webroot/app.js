@@ -18,7 +18,7 @@
   const PRESETS = [
   { id: "off", name: "Off", lvl: "", desc: "Stock behavior.", hl: null },
   { id: "powersave", name: "Efficient Mode", lvl: "eco",
-    desc: "Limit the CPU to 0.75W and a 0.8s ramp-up time, perfect for social media apps.",
+    desc: "Limit the CPU to 0.7W and a 0.9s ramp-up time, perfect for social media apps.",
     hl: "Low battery consumption." },
   { id: "balance", name: "Balanced Mode", lvl: "bal",
     desc: "Limit the CPU to 2W and a 0.2s ramp-up time, perfect for most apps and games.",
@@ -30,8 +30,18 @@
     desc: "Run the CPU and memory at 100% with no ramp-up delay or power limit, meant for the most demanding games with extreme responsiveness.",
     hl: "Extreme battery consumption." }
 ];
-const presetOf = (id) => PRESETS.find((p) => p.id === id) || PRESETS[0];
-const presetName = (id) => presetOf(id).name;
+const presetOf = (id) => { const k = String(id || "").replace(/^so_/, ""); return PRESETS.find((p) => p.id === k) || PRESETS[0]; };
+const DEV = "@device";
+const DEV_APP = { pkg: DEV, label: "This Device", hasIcon: false, device: true };
+const SCR = "@screenoff";
+const SCR_APP = { pkg: SCR, label: "Screen Off", hasIcon: false, scroff: true };
+const isSpecial = (pkg) => pkg === DEV || pkg === SCR;
+const SCR_PRESETS = ["off", "powersave", "balance", "performance"];
+const scrEntry = (preset) => ({ preset, t: 0, h: 0, b: 0, bt: null, btOn: false, btChg: false });
+const defTouch = (id) => (isPerf(id) ? 1 : 0);
+const SCR_NAMES = { off: "Off", powersave: "Deep Sleep", balance: "Light Sleep", performance: "Active Sleep" };
+const scrName = (id) => SCR_NAMES[String(id || "").replace(/^so_/, "")] || presetOf(id).name;
+const presetName = (id) => (/^so_/.test(String(id || "")) ? scrName(id) : presetOf(id).name);
 const isPerf = (id) => id === "performance" || id === "fast";
 const RELEASES_URL = "https://github.com/DonkeyKongG3me/Uperf-Game-Turbo-Fork/releases";
   const FAMILY = {
@@ -40,7 +50,7 @@ const RELEASES_URL = "https://github.com/DonkeyKongG3me/Uperf-Game-Turbo-Fork/re
   };
   const BATOC_WARN = {
     title: "Disable battery limits?",
-    body: ["The phone may restart if the battery runs very low, mostly on older batteries. Best used above 30% or while charging."],
+    body: ["Your device may restart if the battery runs low on older batteries. Use this feature above 30% or while charging."],
     btn: "OK", kind: "danger"
   };
   const BT_CHG_WARN = {
@@ -52,17 +62,50 @@ const RELEASES_URL = "https://github.com/DonkeyKongG3me/Uperf-Game-Turbo-Fork/re
   const WARN = {
     performance: {
       title: "Use Rapid Mode?",
-      body: ["Rapid Mode removes the CPU power cap, so demanding games run much smoother.",
-        "The phone gets hot and the battery drains fast. A cooler is highly recommended."],
+      body: ["Rapid Mode will remove the CPU power cap while this app is running.",
+        "Your device will heat up and your battery will drain quickly. Use this profile?"],
       btn: "OK", kind: "warn"
     },
     fast: {
       title: "Use Extreme Mode?",
-      body: ["Extreme Mode keeps the CPU and memory at 100% the whole time the app is open, with no ramp delay.",
-        "It generates a lot of heat and drains the battery rapidly. Not recommended for long gaming sessions."],
+      body: ["Extreme Mode will run the CPU at peak performance while this app is running.",
+        "Your device will heat up and drain your battery very quickly. Use this profile?"],
       btn: "OK", kind: "danger"
     }
   };
+  const CTX_TEXT = {
+    dev: {
+      off: { desc: "Stock behavior.", hl: null },
+      powersave: { desc: "Limit the CPU to 0.7W with a 0.9s ramp-up time across the system. Longest battery life at the cost of performance.",
+        hl: "Low battery consumption." },
+      balance: { desc: "Limit the CPU to 2W with a 0.2s ramp-up time across the system. Recommended for everyday use.",
+        hl: "Moderate battery consumption." },
+      performance: { desc: "Remove the CPU power cap and ramp-up delay across the system. This profile generates a lot of heat!",
+        hl: "High battery consumption." },
+      fast: { desc: "Remove the CPU power cap and ramp-up delay across the system. This profile runs the CPU at peak performance at all times, not recommended for daily use!",
+        hl: "Extreme battery consumption." }
+    },
+    scr: {
+      off: { desc: "Stock behavior while the screen is off.", hl: null },
+      powersave: { desc: "Background processes run on efficiency cores at the lowest clocks, causing slight lag when unlocking your device. Made for leaving your device overnight.",
+        hl: "Lowest standby drain." },
+      balance: { desc: "Background processes stay on efficiency cores with a low power cap, enough for music, navigation and notifications without waking the big cores.",
+        hl: "Low standby drain." },
+      performance: { desc: "Syncs, backups and downloads can use the faster cores to finish sooner, so your device returns to sleep earlier.",
+        hl: "Moderate standby drain." }
+    }
+  };
+  const CTX_WARN = {
+    dev: {
+      performance: { title: "Use Rapid Mode?",
+        body: ["Rapid Mode will remove the CPU power cap across the entire system.", "Use this profile?"],
+        btn: "OK", kind: "warn" },
+      fast: { title: "Use Extreme Mode?",
+        body: ["Extreme Mode will run the CPU at peak performance across the entire system.", "It will generate a lot of heat and drain your battery quickly. Use this profile?"],
+        btn: "OK", kind: "danger" }
+    }
+  };
+  const ctxOf = (pkg) => (pkg === DEV ? "dev" : pkg === SCR ? "scr" : "app");
   const ACCENTS = [
     { id: "default", name: "Default" },
     { id: "#1E6FD9", name: "Blue" },
@@ -98,6 +141,7 @@ const RELEASES_URL = "https://github.com/DonkeyKongG3me/Uperf-Game-Turbo-Fork/re
     conf: newConf(),
     ui: { v: 1, skin: "", theme: "system", dyn: null, accent: "default", haptics: true, recents: [], noWarn: {}, sort: "default", toasts: true, bubbles: true, swipeHints: 0, moduleOn: true, statusCard: true, sysApps: false, hideFallbackNote: false, hideOutdatedNote: false, btMem: {} },
     tab: "all",
+    rec: false,
     query: "",
     current: null,
     status: {},
@@ -106,13 +150,19 @@ const RELEASES_URL = "https://github.com/DonkeyKongG3me/Uperf-Game-Turbo-Fork/re
     loaded: false
   };
   function newConf() {
-    return { apps: new Map(), exitDelay: 5, poll: 2, batTemp: 0, batTempOn: false, batTempChg: false };
+    return { apps: new Map(), device: null, screenOff: null, exitDelay: 5, poll: 2, batTemp: 0, batTempOn: false, batTempChg: false };
   }
   function cloneConf(c) {
     const n = Object.assign({}, c);
     n.apps = new Map([...c.apps].map(([k, v]) => [k, Object.assign({}, v)]));
+    n.device = c.device ? Object.assign({}, c.device) : null;
+    n.screenOff = c.screenOff ? Object.assign({}, c.screenOff) : null;
     return n;
   }
+  const entry = (c, pkg) => (pkg === DEV ? c.device : pkg === SCR ? c.screenOff : c.apps.get(pkg));
+  function putEntry(c, pkg, e) { if (pkg === DEV) c.device = e; else if (pkg === SCR) c.screenOff = e; else c.apps.set(pkg, e); }
+  function dropEntry(c, pkg) { if (pkg === DEV) c.device = null; else if (pkg === SCR) c.screenOff = null; else c.apps.delete(pkg); }
+  const allEntries = (c) => (c.device ? [...c.apps.values(), c.device] : [...c.apps.values()]);
   const paint = () => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(r, 20))));
   let cbn = 0;
   function run(cmd, timeoutMs) {
@@ -173,9 +223,10 @@ const RELEASES_URL = "https://github.com/DonkeyKongG3me/Uperf-Game-Turbo-Fork/re
       "org.telegram.messenger": "Telegram", "com.spotify.music": "Spotify", "com.miHoYo.GenshinImpact": "Genshin Impact",
       "com.whatsapp": "WhatsApp", "com.instagram.android": "Instagram", "com.android.chrome": "Chrome", "com.discord": "Discord",
       "com.robtopx.geometryjump": "Geometry Dash", "com.netflix.mediaclient": "Netflix", "com.google.android.youtube": "YouTube",
-      "com.tencent.ig": "PUBG Mobile"
+      "com.tencent.ig": "PUBG Mobile", "com.google.android.documentsui": "Files", "com.mixplorer": "MiXplorer",
+      "me.zhanghai.android.files": "Material Files"
     },
-    conf: "FORMAT=2\nAPPS=com.geode.launcher:fast:11:g30 com.google.android.youtube:powersave:10 com.mojang.minecraftpe:balance:10 com.tencent.ig:performance:11:38\nEXIT_DELAY=5\nPOLL_IDLE=2\n",
+    conf: "FORMAT=2\nAPPS=com.geode.launcher:fast:11:g30 com.google.android.youtube:powersave:10 com.mojang.minecraftpe:balance:10 com.tencent.ig:performance:11:38\nSCREEN_OFF=powersave\nEXIT_DELAY=5\nPOLL_IDLE=2\n",
     caps: {
       mediatek: "family=mediatek\nth_mtk=1\nth_mi=1\nth_gpu=0\nth_msm=0\nth_cdev=0\nth_exy=0\nbatoc=1\nbat_low=1\nbat_temp=1\n",
       pixel: "family=pixel\nth_mtk=0\nth_mi=0\nth_gpu=0\nth_msm=0\nth_cdev=4\nth_exy=0\nbatoc=1\nbat_low=1\n",
@@ -201,6 +252,7 @@ const RELEASES_URL = "https://github.com/DonkeyKongG3me/Uperf-Game-Turbo-Fork/re
     ui: JSON.stringify({ v: 1, recents: [
       { p: "com.geode.launcher", t: Date.now() - 4 * 60e3 },
       { p: "com.tencent.ig", t: Date.now() - 50 * 60e3 },
+      { p: "@screenoff", t: Date.now() - 3 * 3600e3 },
       { p: "com.google.android.youtube", t: Date.now() - 26 * 3600e3 }
     ] })
   };
@@ -255,16 +307,30 @@ const RELEASES_URL = "https://github.com/DonkeyKongG3me/Uperf-Game-Turbo-Fork/re
     const prm = new URLSearchParams(location.search);
     const chip = PREVIEW_CHIPS.includes(prm.get("chip")) ? prm.get("chip") : DEFAULT_CHIP;
     const fam = previewFamily(chip);
-    if (/ state$/.test(cmd)) return ok("daemon=running\nactive=" + (prm.get("idle") ? "" : "com.geode.launcher") + "\npreset=fast\nuperf=4211\nbaseline=117\nsoc=" + chip.toUpperCase() + "\nplatform=" + chip + "\nbrand=" + (prm.get("brand") || "POCO") + "\nsdk=35\nversion=1.21\n");
+    if (/ state$/.test(cmd)) return ok("daemon=running\nactive=" + (prm.get("idle") ? "" : "com.geode.launcher") + "\npreset=fast\nuperf=4211\nbaseline=117\nsoc=" + chip.toUpperCase() + "\nplatform=" + chip + "\nbrand=" + (prm.get("brand") || "POCO") + "\nsdk=35\nversion=1.3\n");
     if (/ caps$/.test(cmd)) return ok(DEMO.caps[fam] || "family=" + fam + "\nth_mtk=0\nth_mi=0\nth_gpu=0\nth_msm=0\nth_cdev=0\nth_exy=0\nbatoc=0\n");
     if (/ uperfcfg$/.test(cmd)) return ok(JSON.stringify(DEMO.uperf[fam] || DEMO.uperf.mediatek));
     if (/ getconf$/.test(cmd)) return ok(DEMO.conf);
+    if (/pm list packages -3/.test(cmd)) return ok(DEMO.pkgs.filter((p) => !/^com\.(android|google)\./.test(p)).map((p) => "package:" + p).join("\n"));
     if (/pm list packages/.test(cmd)) return ok(DEMO.pkgs.map((p) => "package:" + p).join("\n"));
+    if (/ launchable$/.test(cmd)) return ok(DEMO.pkgs.filter((p) => p !== "com.tencent.ig").map((p) => "  " + p + "/.MainActivity").join("\n"));
+    if (/ launch /.test(cmd)) return ok("ok\n");
     if (/ setconf /.test(cmd)) return ok("ok\n");
-    if (/ uiget$/.test(cmd)) return ok(DEMO.ui);
-    if (/ uiset /.test(cmd)) return ok("ok\n");
+    if (/ uiget$/.test(cmd)) {
+      let saved = null;
+      try { saved = localStorage.getItem("uperf_preview_ui"); } catch (e) { saved = null; }
+      return ok(saved || DEMO.ui);
+    }
+    if (/ uiset /.test(cmd)) {
+      const m = cmd.match(/ uiset '([A-Za-z0-9+\/=]*)'$/);
+      if (m) { try { localStorage.setItem("uperf_preview_ui", decodeURIComponent(escape(atob(m[1])))); } catch (e) {} }
+      return ok("ok\n");
+    }
     if (/ colors$/.test(cmd)) return ok('overlay={"android.theme.customization.system_palette":"FF3F7A5A","android.theme.customization.color_source":"home_wallpaper"}\n');
     if (/ savelogs$/.test(cmd)) return ok("written: /sdcard/Android/yc/uperf/uperf_logs_20261015_143210.txt\n");
+    if (/ fmlist$/.test(cmd)) return ok("com.google.android.documentsui\ncom.mixplorer\nme.zhanghai.android.files\n");
+    if (/ fmopen /.test(cmd)) return ok("ok\n");
+    if (/ hasshortcut /.test(cmd)) return ok((prm.get("pinned") ? "yes" : "no") + "\n");
     if (/ restart$/.test(cmd)) return ok("watcher : running\n");
     if (/ (start|stop)$/.test(cmd)) return ok("ok\n");
     if (/ pkgdates$/.test(cmd)) return ok(DEMO.pkgs.map((p, i) => (1760000000 - i * 86400 * ((i * 7) % 5 + 1)) + " " + p).join("\n"));
@@ -287,13 +353,14 @@ const RELEASES_URL = "https://github.com/DonkeyKongG3me/Uperf-Game-Turbo-Fork/re
           if (!w) continue;
           const [p, pre, fl, btf] = w.split(":");
           if (!PKG_RE.test(p)) continue;
-          const preset = PRESETS.some((x) => x.id === pre && x.id !== "off") ? pre : "fast";
-          let t = 1, h = isPerf(preset) ? 1 : 0, b = 0;
-          if (/^[01]{2,3}$/.test(fl || "")) { t = +fl[0]; h = +fl[1]; b = fl.length > 2 ? +fl[2] : 0; }
-          if (!fmt2) { t = 1; if (!isPerf(preset)) h = 0; }
-          const bt = parseBtField(btf);
-          c.apps.set(p, { preset, t, h, b, bt: bt ? bt.v : null, btOn: bt ? bt.on : false, btChg: bt ? bt.chg : false });
+          c.apps.set(p, parseEntry(PRESETS.some((x) => x.id === pre && x.id !== "off") ? pre : "fast", fl, btf, fmt2));
         }
+      } else if (k === "DEVICE") {
+        const [pre, fl, btf] = v.split(":");
+        c.device = PRESETS.some((x) => x.id === pre && x.id !== "off") ? parseEntry(pre, fl, btf, true) : null;
+      } else if (k === "SCREEN_OFF") {
+        const pre = v.split(":")[0] === "fast" ? "performance" : v.split(":")[0];
+        c.screenOff = SCR_PRESETS.includes(pre) && pre !== "off" ? scrEntry(pre) : null;
       } else if (k === "EXIT_DELAY" && /^\d+$/.test(v)) c.exitDelay = Math.min(60, +v);
       else if (k === "POLL_IDLE" && /^\d+$/.test(v)) c.poll = clamp(+v, 1, 10);
       else if (k === "BAT_TEMP" && validBt(+v) && /^\d+$/.test(v)) c.batTemp = +v;
@@ -302,6 +369,13 @@ const RELEASES_URL = "https://github.com/DonkeyKongG3me/Uperf-Game-Turbo-Fork/re
     }
     c.batTempOn = btOnSeen === null ? c.batTemp > 0 : !!btOnSeen;
     return c;
+  }
+  function parseEntry(preset, fl, btf, fmt2) {
+    let t = defTouch(preset), h = isPerf(preset) ? 1 : 0, b = 0;
+    if (/^[01]{2,3}$/.test(fl || "")) { t = +fl[0]; h = +fl[1]; b = fl.length > 2 ? +fl[2] : 0; }
+    if (!fmt2) { t = 1; if (!isPerf(preset)) h = 0; }
+    const bt = parseBtField(btf);
+    return { preset, t, h, b, bt: bt ? bt.v : null, btOn: bt ? bt.on : false, btChg: bt ? bt.chg : false };
   }
   const BT_MIN = 10, BT_MAX = 40, BT_DEF = BT_MIN - 1;
   const validBt = (v) => v === 0 || (Number.isInteger(v) && v >= BT_MIN && v <= BT_MAX);
@@ -337,8 +411,9 @@ const RELEASES_URL = "https://github.com/DonkeyKongG3me/Uperf-Game-Turbo-Fork/re
   let saveChain = Promise.resolve();
   function writeConf() {
     const c = S.conf;
-    const apps = [...c.apps].map(([p, e]) => p + ":" + e.preset + ":" + (e.t ? 1 : 0) + (e.h ? 1 : 0) + (e.b ? 1 : 0) + btField(e)).join(" ");
-    const cmd = ctlCmd("setconf", q(apps), c.exitDelay, c.poll, c.batTemp, c.batTempOn ? 1 : 0, c.batTempChg ? 1 : 0);
+    const spec = (e) => e.preset + ":" + (e.t ? 1 : 0) + (e.h ? 1 : 0) + (e.b ? 1 : 0) + btField(e);
+    const apps = [...c.apps].map(([p, e]) => p + ":" + spec(e)).join(" ");
+    const cmd = ctlCmd("setconf", q(apps), c.exitDelay, c.poll, c.batTemp, c.batTempOn ? 1 : 0, c.batTempChg ? 1 : 0, q(c.device ? spec(c.device) : "-"), q(c.screenOff ? c.screenOff.preset : "-"));
     const job = saveChain.then(() => run(cmd));
     saveChain = job.catch(() => {});
     return job;
@@ -350,7 +425,7 @@ const RELEASES_URL = "https://github.com/DonkeyKongG3me/Uperf-Game-Turbo-Fork/re
     const r = await writeConf();
     if (r.errno === 0 && /ok/.test(r.stdout)) {
       if (okMsg) snack(S.ui.moduleOn ? okMsg : "Changes will apply when the module is active", S.ui.moduleOn ? undo : null);
-      setTimeout(refreshStatus, 600);
+      pollStatus();
       return true;
     }
     S.conf = before;
@@ -378,7 +453,7 @@ const RELEASES_URL = "https://github.com/DonkeyKongG3me/Uperf-Game-Turbo-Fork/re
     if (typeof u.dyn === "boolean") S.ui.dyn = u.dyn;
     if (typeof u.accent === "string" && (u.accent === "default" || /^#[0-9a-fA-F]{6}$/.test(u.accent))) S.ui.accent = u.accent;
     if (typeof u.haptics === "boolean") S.ui.haptics = u.haptics;
-    if (Array.isArray(u.recents)) S.ui.recents = u.recents.filter((x) => x && PKG_RE.test(x.p) && +x.t > 0).slice(0, 30);
+    if (Array.isArray(u.recents)) S.ui.recents = u.recents.filter((x) => x && (PKG_RE.test(x.p) || isSpecial(x.p)) && +x.t > 0).slice(0, 30);
     if (SORTS.some((x) => x[0] === u.sort)) S.ui.sort = u.sort;
     if (typeof u.toasts === "boolean") S.ui.toasts = u.toasts;
     if (typeof u.bubbles === "boolean") S.ui.bubbles = u.bubbles;
@@ -389,13 +464,14 @@ const RELEASES_URL = "https://github.com/DonkeyKongG3me/Uperf-Game-Turbo-Fork/re
       S.ui.btMem = {};
       for (const k in u.btMem) {
         const m = u.btMem[k];
-        if (PKG_RE.test(k) && m && validBt(+m.v)) S.ui.btMem[k] = { v: +m.v, on: !!m.on, chg: !!m.chg };
+        if ((PKG_RE.test(k) || k === DEV) && m && validBt(+m.v)) S.ui.btMem[k] = { v: +m.v, on: !!m.on, chg: !!m.chg };
       }
     }
     if (typeof u.moduleOn === "boolean") S.ui.moduleOn = u.moduleOn;
     if (typeof u.statusCard === "boolean") S.ui.statusCard = u.statusCard;
     if (+u.swipeHints >= 0) S.ui.swipeHints = Math.min(9, +u.swipeHints || 0);
-    if (u.noWarn && typeof u.noWarn === "object") S.ui.noWarn = { performance: !!u.noWarn.performance, fast: !!u.noWarn.fast, batoc: !!u.noWarn.batoc, btchg: !!u.noWarn.btchg, tegra: !!u.noWarn.tegra };
+    if (u.noWarn && typeof u.noWarn === "object") S.ui.noWarn = { performance: !!u.noWarn.performance, fast: !!u.noWarn.fast, batoc: !!u.noWarn.batoc, btchg: !!u.noWarn.btchg, tegra: !!u.noWarn.tegra,
+      dev_performance: !!u.noWarn.dev_performance, dev_fast: !!u.noWarn.dev_fast, scr_performance: !!u.noWarn.scr_performance, scr_fast: !!u.noWarn.scr_fast };
   }
   function cacheLook() {
     try {
@@ -677,7 +753,7 @@ const RELEASES_URL = "https://github.com/DonkeyKongG3me/Uperf-Game-Turbo-Fork/re
     if (m) return "#" + m[1].slice(-6);
     return null;
   }
-  let appsGen = 0;
+  let appsGen = 0, confReady = Promise.resolve(), uiReady = Promise.resolve();
   const labelCache = new Map(), pkgCache = {};
   const COLL = new Intl.Collator(undefined, { sensitivity: "base" });
   const yieldMain = () => new Promise((r) => setTimeout(r, 0));
@@ -724,7 +800,10 @@ const RELEASES_URL = "https://github.com/DonkeyKongG3me/Uperf-Game-Turbo-Fork/re
     return true;
   }
   async function loadApps(retried) {
-    const gen = ++appsGen, key = S.ui.sysApps ? "all" : "user";
+    const gen = ++appsGen;
+    await uiReady;
+    if (gen !== appsGen) return;
+    const key = S.ui.sysApps ? "all" : "user";
     if (!pkgCache[key]) {
       let found = await fetchPkgs(!!S.ui.sysApps);
       if (gen !== appsGen) return;
@@ -735,6 +814,8 @@ const RELEASES_URL = "https://github.com/DonkeyKongG3me/Uperf-Game-Turbo-Fork/re
       }
       pkgCache[key] = found;
     }
+    await confReady;
+    if (gen !== appsGen) return;
     const pkgs = pkgCache[key].slice();
     for (const p of S.conf.apps.keys()) if (!pkgs.includes(p)) pkgs.push(p);
     if (!(await fetchLabels(pkgs, gen))) return;
@@ -768,9 +849,9 @@ const RELEASES_URL = "https://github.com/DonkeyKongG3me/Uperf-Game-Turbo-Fork/re
     if (S.labelsKnown) { $("banner").innerHTML = ""; return; }
     showBanner("Your current WebUI viewer is outdated. This might lead to missing app names and icons, so package names get shown instead. WebUI X is recommended for this module.", "hideOutdatedNote");
   }
-  const appOf = (pkg) => S.apps.find((a) => a.pkg === pkg) || { pkg, label: pkg, hasIcon: false };
+  const appOf = (pkg) => (pkg === DEV ? DEV_APP : pkg === SCR ? SCR_APP : S.apps.find((a) => a.pkg === pkg) || { pkg, label: pkg, hasIcon: false });
   const iconNow = new Set(), iconWait = new Set();
-  const ICON_PAR = 6;
+  const ICON_PAR = 10;
   let iconBusy = 0;
   function iconNext() {
     for (const box of iconNow) if (box.isConnected) return box;
@@ -815,6 +896,16 @@ const RELEASES_URL = "https://github.com/DonkeyKongG3me/Uperf-Game-Turbo-Fork/re
   function iconEl(app, cls, ahead) {
     const box = document.createElement("span");
     box.className = cls || "app-ic";
+    if (app.device) {
+      box.classList.add("dev-ic");
+      box.innerHTML = '<svg class="i dev-mx" viewBox="0.267 0 28 28" aria-hidden="true"><use href="#ic-device"/></svg><svg class="i dev-m3" viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-phone"/></svg>';
+      return box;
+    }
+    if (app.scroff) {
+      box.classList.add("dev-ic", "scr-ic");
+      box.innerHTML = '<svg class="i dev-mx" viewBox="0.267 0 28 28" aria-hidden="true"><use href="#ic-scroff"/></svg><svg class="i dev-m3" viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-scroff-m3"/></svg>';
+      return box;
+    }
     const letter = (app.label || app.pkg).replace(/^(com|org|net)\./, "").charAt(0).toUpperCase();
     const fallback = () => { box.textContent = letter; box.classList.add("letter"); };
     if (app.hasIcon) {
@@ -856,9 +947,9 @@ const RELEASES_URL = "https://github.com/DonkeyKongG3me/Uperf-Game-Turbo-Fork/re
     row.disabled = !!disabled;
     row.classList.toggle("disabled", !!disabled);
   }
-  const FX_HTML = '<span class="opt-fx calm" aria-hidden="true">' + '<i class="rp"></i>'.repeat(8) + '<b class="rx">' + '<i class="rp"></i>'.repeat(2) + "</b></span>";
-  function ensureFx(el) {
-    if (!el.querySelector(":scope > .opt-fx")) el.insertAdjacentHTML("afterbegin", FX_HTML);
+  const FX_HTML = '<span class="opt-fx calm" aria-hidden="true">' + '<i class="rp"></i>'.repeat(6);
+  function ensureFx(el, shk) {
+    if (!el.querySelector(":scope > .opt-fx")) el.insertAdjacentHTML("afterbegin", FX_HTML + (shk ? '<b class="rx"><i class="rp"></i></b>' : "") + "</span>");
   }
   const fxVisible = new Set();
   let fxList = [], fxQueued = false, fxSeed = null, syncMotion = () => {};
@@ -889,15 +980,99 @@ const RELEASES_URL = "https://github.com/DonkeyKongG3me/Uperf-Game-Turbo-Fork/re
     });
   }
   const rowCache = new Map();
-  const SEL = { on: false, set: new Set(), pop: false };
-  function paintClearBtn() {
-    const clr = S.loaded && S.tab === "on" && S.conf.apps.size > 0, cb = $("clearBoosted");
-    cb.parentElement.classList.toggle("with-clear", clr);
-    cb.tabIndex = clr ? 0 : -1;
-    cb.setAttribute("aria-hidden", clr ? "false" : "true");
+  const SEL = { on: false, set: new Set(), pop: false, mode: "boost" };
+  function actSnap() {
+    const out = {};
+    if (reduceMotion.matches) return out;
+    for (const id of ["clearRecents"]) {
+      const b = $(id);
+      if (b.classList.contains("on") && b.getClientRects().length) out[id] = b.querySelector(".act-txt").getBoundingClientRect();
+    }
+    return out;
   }
+  function actGhost(b, r) {
+    const t = b.querySelector(".act-txt"), cs = getComputedStyle(t), g = document.createElement("span");
+    g.className = "act-ghost";
+    g.setAttribute("aria-hidden", "true");
+    g.textContent = t.textContent;
+    Object.assign(g.style, {
+      left: r.left + "px", top: r.top + "px", width: r.width + "px", height: r.height + "px",
+      font: cs.font, color: cs.color, letterSpacing: cs.letterSpacing, lineHeight: cs.lineHeight,
+      textDecorationLine: cs.textDecorationLine, textDecorationThickness: cs.textDecorationThickness, textUnderlineOffset: cs.textUnderlineOffset
+    });
+    document.body.appendChild(g);
+    const mx = root.dataset.skin === "miuix";
+    const a = g.animate(mx
+      ? [{ opacity: 1, filter: "blur(0px)", transform: "none" }, { opacity: 0, offset: 0.72 }, { opacity: 0, filter: "blur(8px)", transform: "scale(.55)" }]
+      : [{ opacity: 1, transform: "none" }, { opacity: 0, offset: 0.75 }, { opacity: 0, transform: "translateX(8px)" }],
+      { duration: mx ? 139 : 126, easing: "ease-in", fill: "forwards" });
+    a.onfinish = a.oncancel = () => g.remove();
+  }
+  function paintClearBtn(was) {
+    const clr = S.loaded && !!S.rec && S.ui.recents.length > 0;
+    for (const [id, on] of [["clearRecents", clr]]) {
+      const b = $(id);
+      if (!on && was && was[id] && b.classList.contains("on")) {
+        actGhost(b, was[id]);
+        b.classList.add("cut");
+        requestAnimationFrame(() => requestAnimationFrame(() => b.classList.remove("cut")));
+      }
+      b.classList.toggle("on", on);
+      b.tabIndex = on ? 0 : -1;
+      b.setAttribute("aria-hidden", on ? "false" : "true");
+    }
+  }
+  function setRec(on) {
+    if (!!S.rec === on) return;
+    S.rec = on;
+    const b = $("recentBtn");
+    b.classList.toggle("on", on);
+    b.setAttribute("aria-pressed", on ? "true" : "false");
+    ctlFold($("tabsCtl"), on);
+    for (const t of $("tabs").querySelectorAll(".tab")) t.tabIndex = on ? -1 : (t.getAttribute("aria-selected") === "true" ? 0 : -1);
+    $("tabsCtl").setAttribute("aria-hidden", on ? "true" : "false");
+    renderList();
+  }
+  function ctlFold(ctl, hide) {
+    clearTimeout(ctl._t);
+    if (hide) ctl.classList.add("clip", "gone");
+    else {
+      ctl.classList.remove("gone");
+      ctl._t = setTimeout(() => { if (!ctl.classList.contains("gone")) ctl.classList.remove("clip"); fitCollapse($("scrHome")); }, 470);
+    }
+  }
+  function iconTap(btn, kind, back) {
+    if (reduceMotion.matches) return;
+    const svg = btn.querySelector("svg.i");
+    if (!svg) return;
+    for (const a of svg._taps || []) a.cancel();
+    const go = (sel, frames, opt) => { const el = svg.querySelector(sel); return el ? el.animate(frames, Object.assign({ fill: "none" }, opt)) : null; };
+    const T = 600, main = "cubic-bezier(.3, .9, .3, 1)";
+    const pop = (sel) => go(sel, [{ transform: "scale(1)" }, { transform: "scale(.84)", offset: .25 }, { transform: "scale(1.07)", offset: .6 }, { transform: "scale(1)" }], { duration: T, easing: "ease-in-out" });
+    let list;
+    if (kind === "clock") {
+      const d = back ? -1 : 1;
+      list = [
+        go(".ck-min", [{ transform: "rotate(0deg)" }, { transform: "rotate(" + 360 * d + "deg)" }], { duration: T, easing: main }),
+        go(".ck-hr", [{ transform: "rotate(0deg)" }, { transform: "rotate(" + 30 * d + "deg)", offset: .55 }, { transform: "rotate(0deg)" }], { duration: T, easing: main }),
+        pop(".ck-face")
+      ];
+    } else {
+      const sx = (v) => ({ transform: "scaleX(" + v + ")" });
+      list = [
+        go(".so-l1", [sx(1), sx(5 / 11), sx(1.06), sx(1)], { duration: T - 80, easing: main }),
+        go(".so-l2", [sx(1), sx(.55), sx(1.12), sx(1)], { duration: T - 80, delay: 40, easing: main }),
+        go(".so-l3", [sx(1), sx(11 / 5), sx(.9), sx(1)], { duration: T - 80, delay: 80, easing: main }),
+        go(".so-ar", [{ transform: "translateY(0)" }, { transform: "translateY(-3px)", offset: .25 }, { transform: "translateY(2.5px)", offset: .6 }, { transform: "translateY(0)" }], { duration: T, easing: "ease-in-out" })
+      ];
+    }
+    svg._taps = list.filter(Boolean);
+  }
+  const selCan = (pkg) => (SEL.on ? SEL.mode === "rec" : S.rec) ? S.ui.recents.some((x) => x.p === pkg) : isSpecial(pkg) ? !!entry(S.conf, pkg) : S.conf.apps.has(pkg);
+  const selNoun = (pkgs, n) => (pkgs.some((p) => isSpecial(p)) ? (n === 1 ? "item" : "items") : (n === 1 ? "app" : "apps"));
   function paintSel(r) {
-    const can = SEL.on && S.conf.apps.has(r.app.pkg);
+    const host = r.el.parentElement;
+    const can = SEL.on && selCan(r.app.pkg) && (host === $("list") || host === $("devGroup"));
     r.el.classList.toggle("sel-na", SEL.on && !can);
     let box = r.selBox;
     if (can && !box) {
@@ -945,18 +1120,18 @@ const RELEASES_URL = "https://github.com/DonkeyKongG3me/Uperf-Game-Turbo-Fork/re
     return r;
   }
   function updateRow(r, recentT) {
-    const e = S.conf.apps.get(r.app.pkg);
-    const sumText = recentT ? ago(recentT) : (r.app.label !== r.app.pkg ? r.app.pkg : "");
+    const e = entry(S.conf, r.app.pkg);
+    const sumText = recentT ? ago(recentT) : r.app.device ? "Apply to entire device" : r.app.scroff ? "When the screen is off" : (r.app.label !== r.app.pkg ? r.app.pkg : "");
     if (r.sum.textContent !== sumText) r.sum.textContent = sumText;
     r.sum.hidden = !sumText;
-    r.end.hidden = !e && !recentT;
-    const text = e ? presetName(e.preset) : "Off";
+    r.end.hidden = !e && !recentT && !r.app.device && !r.app.scroff;
+    const text = e ? (r.app.scroff ? scrName(e.preset) : presetName(e.preset)) : "Off";
     if (r.end.textContent !== text) r.end.textContent = text;
     r.end.className = "row-end" + (e ? " on" : "");
     if (e) r.end.dataset.lvl = r.el.dataset.lvl = presetOf(e.preset).lvl; else { delete r.end.dataset.lvl; delete r.el.dataset.lvl; }
     if (e) ensureFx(r.el);
     r.el.classList.toggle("fx-live", !!e);
-    r.el.setAttribute("aria-label", r.app.label + ", " + (e ? "boosted, " + text : "not boosted"));
+    r.el.setAttribute("aria-label", r.app.label + ", " + (e ? (r.app.scroff ? "on, " : "boosted, ") + text : r.app.scroff ? "off, stock" : "not boosted"));
     paintSel(r);
   }
   const SORTS = [
@@ -1034,20 +1209,41 @@ const RELEASES_URL = "https://github.com/DonkeyKongG3me/Uperf-Game-Turbo-Fork/re
     };
     listFill = requestAnimationFrame(step);
   }
-  function renderList() {
-    const list = $("list");
+  function listModel() {
     const qv = S.query.toLowerCase();
+    const hit = (...w) => !qv || w.some((x) => x.includes(qv));
+    const dev = [];
+    if (!S.rec) {
+      if ((S.tab !== "on" || !!entry(S.conf, DEV)) && hit("this device", "phone")) dev.push(DEV_APP);
+      if ((S.tab !== "on" || !!entry(S.conf, SCR)) && hit("screen off", "screen", "sleep", "standby", "lock")) dev.push(SCR_APP);
+    }
     let items;
-    if (S.tab === "recent") items = S.ui.recents.map((r) => ({ app: appOf(r.p), t: r.t }));
-    else if (S.tab === "on") items = S.apps.filter((a) => S.conf.apps.has(a.pkg)).map((app) => ({ app }));
+    if (S.rec) items = S.ui.recents.map((r) => ({ app: appOf(r.p), t: r.t }));
     else items = S.apps.map((app) => ({ app }));
+    if (!S.rec && S.tab === "on") items = items.filter((x) => S.conf.apps.has(x.app.pkg));
     const pool = items;
-    if (qv) items = items.filter((x) => x.app.label.toLowerCase().includes(qv) || x.app.pkg.toLowerCase().includes(qv));
-    items = sortItems(items, S.tab === "recent");
+    if (qv) items = items.filter((x) => x.app.label.toLowerCase().includes(qv) || (!isSpecial(x.app.pkg) && x.app.pkg.toLowerCase().includes(qv)));
+    items = sortItems(items, S.rec);
+    return { qv, dev: S.loaded ? dev : [], items, pool };
+  }
+  function renderDevice(m) {
+    const g = $("devGroup");
+    const show = m.dev.length > 0;
+    g.hidden = $("devLbl").hidden = !show;
+    const els = m.dev.map((a) => rowFor(a).el);
+    if (els.length !== g.children.length || els.some((el, i) => g.children[i] !== el)) g.replaceChildren(...els);
+    for (const a of m.dev) updateRow(rowFor(a));
+  }
+  function renderList() {
+    const was = actSnap();
+    syncDev();
+    const m = listModel(), qv = m.qv, pool = m.pool, items = m.items;
+    renderDevice(m);
+    const list = $("list");
     list.style.setProperty("--w", (list.offsetWidth || window.innerWidth - 24) + "px");
-    const order = S.tab + "|" + items.map((x) => x.app.pkg).join(",");
+    const order = S.tab + (S.rec ? "~r" : "") + "|" + items.map((x) => x.app.pkg).join(",");
     const make = (x) => { const r = rowFor(x.app); updateRow(r, x.t); return r.el; };
-    if (order !== lastOrder) {
+    if (order !== lastOrder || items.some((x, i) => i < 40 && list.children[i] !== rowFor(x.app).el)) {
       cancelAnimationFrame(listFill);
       lastOrder = order;
       list.replaceChildren(...items.slice(0, 40).map(make));
@@ -1055,23 +1251,29 @@ const RELEASES_URL = "https://github.com/DonkeyKongG3me/Uperf-Game-Turbo-Fork/re
     } else for (const x of items) { const r = rowCache.get(x.app.pkg); if (r) updateRow(r, x.t); }
     list.hidden = !items.length;
     iconPump();
-    paintClearBtn();
-    $("recentHead").hidden = !(S.tab === "recent" && S.ui.recents.length);
+    $("listPanel").classList.toggle("in-rec", !!S.rec);
+    $("appsLbl").textContent = S.rec ? "Recents" : "Apps";
+    paintClearBtn(was);
     $("loading").hidden = S.loaded;
+    $("appsHead").hidden = !S.loaded;
     fitCollapse($("scrHome"));
     fxInvalidate();
-    const empty = $("empty");
-    empty.hidden = !S.loaded || items.length > 0;
+    paintEmpty(m, S.tab, (id) => $(id));
+    fitEmpty();
+  }
+  function paintEmpty(m, tab, part) {
+    const qv = m.qv, empty = part("empty");
+    empty.hidden = !S.loaded || m.items.length > 0;
     if (!empty.hidden) {
       const [t, s] = qv ? ["No apps match “" + S.query + "”", "Check the spelling, or search by package name."]
-        : S.tab === "on" ? ["No boosted apps yet", "Open All apps, tap an app and pick a mode."]
-          : S.tab === "recent" ? ["Nothing here yet", "Apps you change show up here, even after you switch them off."]
+        : S.rec ? ["Nothing here yet", "Apps you change show up here, even after you switch them off."]
+          : tab === "on" ? ["No boosted apps yet", "Open All apps, tap an app and pick a mode."]
             : ["No apps found", "The app list couldn't be read. Try reopening this screen."];
-      $("emptyTitle").textContent = t;
-      $("emptySum").textContent = s;
+      part("emptyTitle").textContent = t;
+      part("emptySum").textContent = s;
     }
-    const dym = $("emptyDym"), more = $("emptyMore");
-    const sug = !empty.hidden && qv ? suggestApp(S.query, pool) : null;
+    const dym = part("emptyDym"), more = part("emptyMore");
+    const sug = !empty.hidden && qv ? suggestApp(S.query, m.pool) : null;
     dym.hidden = !sug;
     if (sug) {
       const name = document.createElement("span");
@@ -1080,11 +1282,10 @@ const RELEASES_URL = "https://github.com/DonkeyKongG3me/Uperf-Game-Turbo-Fork/re
       dym.dataset.label = sug.label;
       dym.replaceChildren("Did you mean ", name, "?");
     }
-    const kind = empty.hidden || !qv ? "" : S.tab !== "all" ? "all" : S.ui.sysApps ? "" : "sys";
+    const kind = empty.hidden || !qv ? "" : tab !== "all" || S.rec ? "all" : S.ui.sysApps ? "" : "sys";
     more.hidden = !kind;
     more.dataset.kind = kind;
     more.textContent = kind === "all" ? "View All apps" : "View system apps";
-    fitEmpty();
   }
   function fitEmpty() {
     const el = $("empty"), scr = $("scrHome");
@@ -1146,7 +1347,7 @@ const RELEASES_URL = "https://github.com/DonkeyKongG3me/Uperf-Game-Turbo-Fork/re
     const n = S.conf.apps.size;
     $("countOn").textContent = n ? " (" + n + ")" : "";
     for (const el of document.querySelectorAll(".tab")) {
-      const sel = el.dataset.tab === S.tab;
+      const sel = el.dataset.tab === (tabLand || S.tab);
       el.setAttribute("aria-selected", sel ? "true" : "false");
       el.tabIndex = sel ? 0 : -1;
       if (sel) $("listPanel").setAttribute("aria-labelledby", el.id);
@@ -1159,13 +1360,19 @@ const RELEASES_URL = "https://github.com/DonkeyKongG3me/Uperf-Game-Turbo-Fork/re
       $(k + "Val").textContent = (o.items.find((x) => x[0] === cur) || o.items[0])[1];
     }
   }
+function boostedText(n) {
+  if (!S.conf.device && n === 0 && S.conf.screenOff) return "Screen Off mode is set.";
+  if (S.conf.device) return n === 0 ? "This device is boosted." : n === 1 ? "This device and 1 app are boosted." : "This device and " + n + " apps are boosted.";
+  return n === 1 ? "1 app is boosted." : n + " apps are boosted";
+}
 function renderSettings() {
   renderSegs();
   setSwitch($("rowDyn"), S.ui.dyn);
   $("dynSum").textContent = S.ui.dyn
     ? (wallpaperSeed ? "Using your wallpaper's highlight colors for the user interface." : "Wallpaper colors not found; using the default colors")
     : "Use your wallpaper's highlight colors for the user interface.";
-  $("accentRow").hidden = !!S.ui.dyn;
+  $("accentRow").classList.toggle("dyn-lock", !!S.ui.dyn);
+  $("accentRow").inert = !!S.ui.dyn;
   setSwitch($("rowHaptics"), S.ui.haptics);
   setSwitch($("rowToasts"), S.ui.toasts);
   setSwitch($("rowBubbles"), S.ui.bubbles);
@@ -1176,15 +1383,17 @@ function renderSettings() {
   setSwitch($("rowModule"), S.ui.moduleOn);
   setSwitch($("rowStatusCard"), S.ui.statusCard);
   if (!modSumHold) $("modTitle").textContent = "Enable Module";
-  const nOn = S.conf.apps.size;
+  const nOn = S.conf.apps.size, devOn = !!S.conf.device;
   if (!modSumHold) {
     $("modSum").textContent = off ? "Module is disabled. Activate it to boost apps."
+      : devOn || (nOn === 0 && S.conf.screenOff) ? "Module is running. " + boostedText(nOn)
       : nOn === 0 ? "Module is running. No apps are boosted."
       : nOn === 1 ? "Module is running. 1 app is boosted."
       : `Module is running. ${nOn} apps are boosted.`;
   }
   root.classList.toggle("mod-off", off);
-  const idle = S.conf.apps.size === 0;
+  syncDev();
+  const idle = S.conf.apps.size === 0 && !devOn && !S.conf.screenOff;
   const locked = off || idle;
   for (const [id, name, msg] of [["ed", "return-to-stock delay", "Boost an app to configure the return-to-stock delay"], ["pi", "check interval", "Boost an app to configure the check interval"]]) {
     const sl = $(id + "Slider"), sum = $(id + "Sum");
@@ -1199,7 +1408,7 @@ function renderSettings() {
     setSwitch($("rowGbt"), on, btLocked);
     $("btSwSum").textContent = !sup ? btUnsupportedText() : off ? "Activate module to configure the battery temperature"
       : idle ? "Boost an app to configure the battery temperature"
-      : "Report a fake battery temperature while boosted apps are open. This feature doesn't work during charging by default.";
+      : "Report a fake battery temperature while boosted apps are open.";
     setCollapse($("btRow"), on);
     setCollapse($("rowGbtChg"), on);
     setSwitch($("rowGbtChg"), S.conf.batTempChg, btLocked);
@@ -1295,12 +1504,13 @@ function renderSettings() {
       mode = "error"; label = "Watcher stopped. Start it";
     } else if (st.active) {
       const p = presetOf(st.preset);
-      title = "Boosting " + appOf(st.active).label;
-      sum = [{ hl: p.name, lvl: p.lvl }, " is active."];
-      mode = "active"; label = title + ", " + p.name + ". Open its settings";
-    } else if (n) {
+      title = st.active === DEV ? "Boosting this device" : st.active === SCR ? "Screen Off mode" : "Boosting " + appOf(st.active).label;
+      const pn = st.active === SCR ? scrName(st.preset) : presetName(st.preset);
+      sum = [{ hl: pn, lvl: p.lvl }, " is active"];
+      mode = "active"; label = title + ", " + pn + ". Open its settings";
+    } else if (n || S.conf.device || S.conf.screenOff) {
       title = "Module is running";
-      sum = [(n === 1 ? "1 app is boosted." : n + " apps are boosted.")];
+      sum = [boostedText(n)];
       mode = "idle"; label = title + ". " + sum[0];
     } else {
       title = "Nothing boosted yet";
@@ -1319,7 +1529,31 @@ function renderSettings() {
     }
     box.setAttribute("aria-label", label);
   }
+  let presetCtx = "app";
+  function presetText(p, ctx) {
+    const t = CTX_TEXT[ctx] && CTX_TEXT[ctx][p.id];
+    return t ? t : { desc: p.desc, hl: p.hl };
+  }
+  function setPresetTexts(ctx) {
+    if (ctx === presetCtx) return;
+    presetCtx = ctx;
+    for (const b of $("presetList").children) {
+      b.hidden = ctx === "scr" && !SCR_PRESETS.includes(b.dataset.id);
+      b.querySelector(".pn").textContent = ctx === "scr" ? scrName(b.dataset.id) : presetOf(b.dataset.id).name;
+      const p = presetOf(b.dataset.id), t = presetText(p, ctx);
+      const sum = b.querySelector(".row-sum");
+      sum.replaceChildren(descEl([t.desc], p.lvl));
+      if (t.hl) {
+        sum.appendChild(document.createElement("br"));
+        const hl = descEl([{ hl: t.hl }], p.lvl).firstChild;
+        hl.id = "opt-" + p.id + "-hl";
+        sum.appendChild(hl);
+      }
+      b.setAttribute("aria-describedby", "opt-" + p.id + "-d" + (t.hl ? " opt-" + p.id + "-hl" : ""));
+    }
+  }
   function buildPresetList() {
+    presetCtx = "app";
     const list = $("presetList");
     const frag = document.createDocumentFragment();
     for (const p of PRESETS) {
@@ -1352,8 +1586,11 @@ function renderSettings() {
     const app = appOf(pkg);
     $("appTitle").textContent = app.label;
     $("appBarTitle").textContent = app.label;
-    $("appPkg").textContent = app.pkg;
-    $("appPkg").hidden = app.label === app.pkg;
+    $("appPkg").textContent = app.device ? "Apply to device system and all apps" : app.scroff ? "Apply while the screen is off" : app.pkg;
+    $("appPkg").hidden = !app.device && !app.scroff && app.label === app.pkg;
+    setPresetTexts(ctxOf(pkg));
+    renderLaunch();
+    if (!app.device && !app.scroff && !launchCache.has(pkg)) canLaunch(pkg).then(whenCalm).then(() => { if (S.current === pkg) renderLaunch(); });
     const ic = iconEl(app, "app-icon");
     ic.id = "appIcon";
     ic.setAttribute("aria-hidden", "true");
@@ -1361,10 +1598,70 @@ function renderSettings() {
     $("scrApp").scrollTop = 0;
     renderApp();
   }
+  const launchCache = new Map();
+  let launchAllJob = null, userSetJob = null;
+  function loadLaunchables() {
+    if (!launchAllJob) launchAllJob = run(ctlCmd("launchable"), 20000).then((r) => {
+      const set = new Set();
+      for (const line of (r.stdout || "").split("\n")) {
+        const m = /^([A-Za-z0-9._]+)\/\S+$/.exec(line.trim());
+        if (m) set.add(m[1]);
+      }
+      return set.size ? set : null;
+    }, () => null);
+    return launchAllJob;
+  }
+  function userPkgSet() {
+    if (!userSetJob) userSetJob = (pkgCache.user ? Promise.resolve(pkgCache.user) : fetchPkgs(false)).then((l) => {
+      if (!l.length) userSetJob = null;
+      return new Set(l);
+    }, () => { userSetJob = null; return new Set(); });
+    return userSetJob;
+  }
+  async function canLaunch(pkg) {
+    if (isSpecial(pkg)) return false;
+    if (launchCache.has(pkg)) return launchCache.get(pkg);
+    let ok = false;
+    const users = await userPkgSet();
+    if (users.has(pkg)) {
+      const all = await loadLaunchables();
+      if (all) ok = all.has(pkg);
+      else {
+        const r = await run(ctlCmd("launchable", q(pkg)), 10000);
+        ok = r.errno === 0 && (r.stdout || "").trim().startsWith(pkg + "/");
+      }
+    }
+    if (users.size) launchCache.set(pkg, ok);
+    return ok;
+  }
+  const whenCalm = () => (running.length || document.body.classList.contains("swiping") ? new Promise((r) => setTimeout(r, 80)).then(whenCalm) : undefined);
+  async function warmLaunchCache() {
+    const [users, all] = await Promise.all([userPkgSet(), loadLaunchables()]);
+    if (!all || !users.size) return;
+    for (const pkg of users) if (!launchCache.has(pkg)) launchCache.set(pkg, all.has(pkg));
+  }
+  function renderLaunch() {
+    const pkg = S.current, show = !!pkg && !isSpecial(pkg) && launchCache.get(pkg) === true;
+    $("launchRow").hidden = !show;
+    $("scrApp").classList.toggle("has-launch", show);
+    $("launchBtn").setAttribute("aria-label", "Launch " + appOf(pkg).label);
+  }
+  const DEV_LOCK = ["rowTouch", "rowThermal", "rowBatoc", "rowAbt", "rowAbtChg", "abtRow"];
+  function syncDev() {
+    const on = !!(S.conf && S.conf.device), isDev = S.current === DEV, isScr = S.current === SCR;
+    root.classList.toggle("dev-on", on);
+    $("scrApp").classList.toggle("is-dev", isDev);
+    $("scrApp").classList.toggle("is-scroff", isScr);
+    if (isScr) { fitCollapse($("scrApp")); onScroll($("scrApp")); }
+    if (fxSeed) fxSeed();
+    for (const id of DEV_LOCK) $(id).inert = isScr || (on && !isDev);
+    syncMotion();
+  }
   function renderApp() {
     const pkg = S.current;
     if (!pkg) return;
-    const e = S.conf.apps.get(pkg);
+    syncDev();
+    const e = entry(S.conf, pkg);
     const preset = e ? e.preset : "off";
     const off = !S.ui.moduleOn;
     $("modPill").hidden = !off;
@@ -1372,7 +1669,7 @@ function renderSettings() {
       const sel = b.dataset.id === preset;
       b.setAttribute("aria-checked", sel ? "true" : "false");
       b.tabIndex = sel ? 0 : -1;
-      if (sel && b.dataset.lvl) ensureFx(b);
+      if (sel && b.dataset.lvl) ensureFx(b, true);
       b.classList.toggle("fx-live", sel && !!b.dataset.lvl);
     }
     const list = $("presetList");
@@ -1389,7 +1686,7 @@ function renderSettings() {
       $("tSum").textContent = $("hSum").textContent = $("bSum").textContent = "Pick a mode first";
       return;
     }
-    const ti = touchInfo(e.preset, !!e.t);
+    const ti = touchInfo(e.preset, !!e.t, pkg === DEV);
     setSwitch(touchRow, ti.ok ? e.t : true, !ti.ok);
     $("tSum").replaceChildren(...ti.text.map((part) => {
       if (typeof part === "string") return document.createTextNode(part);
@@ -1406,8 +1703,8 @@ function renderSettings() {
   }
   const capOn = (k) => !!S.caps && S.caps[k] === "1";
   const btSupported = () => capOn("bat_temp");
-  const btUnsupportedText = () => S.caps ? "Not supported on this phone. No battery temp file was found in /sys/class/power_supply, or root can't mount over it."
-    : "Couldn't check if this phone supports it.";
+  const btUnsupportedText = () => S.caps ? "Not supported on this device. No battery temp file was found in /sys/class/power_supply, or root can't mount over it."
+    : "Couldn't check if this device supports it.";
   const btLabel = (v) => (v >= BT_MIN ? v + "\u2009°C" : "Default");
   const globalBtLabel = () => (S.conf.batTempOn ? btLabel(S.conf.batTemp) : "off");
   function appBtState(pkg, e) {
@@ -1422,8 +1719,8 @@ function renderSettings() {
     $("abtSwSum").textContent = !sup ? btUnsupportedText()
       : off ? "Activate module to configure the battery temperature"
       : !e ? "Pick a mode first"
-      : st.on ? "This app uses its own battery temperature."
-      : "Uses the global setting (" + globalBtLabel() + "). Turn on to use a different temperature for this app.";
+      : st.on ? (pkg === DEV ? "This device uses its own battery temperature." : "This app uses its own battery temperature.")
+      : "Uses the global setting (" + globalBtLabel() + "). Turn on to use a different temperature for " + (pkg === DEV ? "This Device." : "this app.");
     setCollapse($("abtRow"), st.on);
     setCollapse($("rowAbtChg"), st.on, true);
     setSwitch($("rowAbtChg"), st.chg, locked);
@@ -1443,11 +1740,11 @@ function renderSettings() {
     else if (capOn("th_gpu") && capOn("th_msm")) text = "Turn off the CPU and GPU heat limits.";
     else if (capOn("th_gpu")) { title = "Disable GPU thermal limits"; text = "Turn off the Adreno GPU heat limits."; }
     else if (capOn("th_msm")) text = "Turn off the CPU heat limits.";
-    else if (c.family === "pixel" && cdev) text = "Turn off Android's CPU and GPU heat limits. The phone will get noticeably warmer.";
+    else if (c.family === "pixel" && cdev) text = "Turn off Android's CPU and GPU heat limits. The device may become warmer.";
     else if (c.family === "exynos" && (capOn("th_exy") || cdev)) text = "Turn off Samsung's " + (cdev ? "CPU and GPU" : "CPU") + " heat limits.";
     if (!text) {
       const fam = c.family !== "pixel" && c.family !== "exynos" && FAMILY[c.family];
-      return { ok: false, title, text: "Not supported on " + (fam ? fam + " chips." : "this phone yet.") };
+      return { ok: false, title, text: "Not supported on " + (fam ? fam + " chips." : "this device yet.") };
     }
     return { ok: true, title, text };
   }
@@ -1455,7 +1752,7 @@ function renderSettings() {
     const c = S.caps;
     if (c && capOn("batoc") && capOn("bat_low")) return { ok: true, text: "Turn off the CPU and GPU slowdowns when the battery is low or under heavy load." };
     if (!c || capOn("batoc")) return { ok: true, text: "Turn off the CPU and GPU slowdowns when the battery is under heavy load." };
-    return { ok: false, text: "Not supported on this phone yet." };
+    return { ok: false, text: "Not supported on this device yet." };
   }
   function touchFx(preset) {
     const cfg = S.uperf;
@@ -1483,24 +1780,24 @@ function renderSettings() {
       always: (P.idle || {})["sched.scene"] === "touch"
     };
   }
-  function touchInfo(preset, on) {
+  function touchInfo(preset, on, isDev) {
   const fx = touchFx(preset);
   if (preset === "fast" || (fx !== null && !(fx.lift > 0.04) && !fx.tap && !fx.burst)) {
     return { ok: false, text: ["Touch boosting is always enabled in this mode."] };
   }
   if (!on) return { ok: true, text: ["Touch boosting is off."] };
-  const lead = "Touch boosting is on. The CPU will respond faster to all touches in this app when this feature is on. ";
+  const lead = "Touch boosting is on. The CPU will respond faster to all touches for " + (isDev ? "This Device." : "this app.");
   if (preset === "performance") {
     return { ok: true, text: [lead.trimEnd()] };
   }
-  const cap = preset === "powersave" ? "0.75W" : "~2W";
+  const cap = preset === "powersave" ? "0.7W" : "~2W";
   const faster = preset === "powersave" ? [{ mode: "balance", label: "Balanced" }, " and ", { mode: "performance" }] : [{ mode: "performance" }];
   return { ok: true, text: [lead + "Slightly snappier in ", ...faster, "."] };
 }
 const touchOk = (preset) => touchInfo(preset).ok;
 function normalizeFlags(c) {
   const thOk = thermalInfo().ok, bOk = batocInfo().ok;
-  for (const e of c.apps.values()) {
+  for (const e of allEntries(c)) {
     if (!touchOk(e.preset)) e.t = 1;
     if (!thOk) e.h = 0;
     if (!bOk) e.b = 0;
@@ -1543,13 +1840,15 @@ function normalizeFlags(c) {
     if (r.errno !== 0) snack("Couldn't open the browser. The page is " + url, null, true);
   }
   const G = {};
-  function glider(el, getCurrent, pick) {
-    const items = () => [...el.children].filter((c) => !c.classList.contains("ind") && !c.hidden);
-    const isPill = el.classList.contains("pillnav");
+  function glider(el, getCurrent, pick, opts) {
+    const o = Object.assign({ pill: false, skin: "", pauseFx: false, spring: false, gain: 1, fit: false }, opts);
+    const items = () => [...el.children].filter((c) => !c.classList.contains("ind") && !c.classList.contains("lens") && !c.hidden);
+    const isPill = o.pill || el.classList.contains("pillnav");
+    const active = () => !o.skin || root.dataset.skin === o.skin;
     let placed = false, st = null, suppressUntil = 0;
     const inPill = (x, w) => {
       const s = parseFloat(getComputedStyle(el).getPropertyValue("--psx")) || 1;
-      const ext = Math.max(0, (s - 1) * w / 2);
+      const ext = Math.max(0, (s - 1) * w / 2) - el.clientLeft;
       return clamp(x, ext, Math.max(ext, el.clientWidth - w - ext));
     };
     function place(b, anim) {
@@ -1558,11 +1857,17 @@ function normalizeFlags(c) {
       if (still) el.classList.add("no-anim");
       el.style.setProperty("--ix", b.offsetLeft + "px");
       el.style.setProperty("--iw", b.offsetWidth + "px");
+      if (o.fit) {
+        const h = el.clientHeight, ih = el.querySelector(".ind").offsetHeight || h, grow = Math.max(0, h - ih);
+        el.style.setProperty("--psx", ((b.offsetWidth + grow) / b.offsetWidth).toFixed(4));
+        el.style.setProperty("--psy", (h / ih).toFixed(4));
+        el.style.setProperty("--pr", (h / 2) + "px");
+      }
       placed = true;
       el.classList.add("placed");
       if (still) { void el.offsetWidth; el.classList.remove("no-anim"); }
     }
-    const BLUR_MAX = 5.25, BLUR_STEP = 4;
+    const BLUR_MAX = 4.2, BLUR_STEP = 4;
     let lastBl = 0, blTimer = 0;
     function unblur() {
       if (lastBl === 0) return;
@@ -1581,7 +1886,38 @@ function normalizeFlags(c) {
       el.classList.add("blurring");
       el.style.setProperty("--bl", v + "px");
     }
+    const SP = o.spring ? { sx: mkSpring(1), sy: mkSpring(1), tx: mkSpring(0), ty: mkSpring(0) } : null;
+    let sRaf = 0, sLast = 0;
+    function sFrame(now) {
+      sRaf = 0;
+      const dt = Math.min(0.034, sLast ? (now - sLast) / 1000 : 1 / 60);
+      sLast = now;
+      const mv = st ? [0.14, 0.9] : [0.42, 0.52];
+      for (const k in SP) stepSpring(SP[k], dt, mv[0], mv[1]);
+      if (!st && Object.keys(SP).every((k) => springIdle(SP[k], k[0] === "t" ? 0.05 : 0.0005))) {
+        sLast = 0;
+        for (const k in SP) snapSpring(SP[k], SP[k].to);
+        for (const v of ["--sx", "--sy", "--tx", "--ty"]) el.style.removeProperty(v);
+        return;
+      }
+      el.style.setProperty("--sx", SP.sx.x.toFixed(4));
+      el.style.setProperty("--sy", SP.sy.x.toFixed(4));
+      el.style.setProperty("--tx", SP.tx.x.toFixed(2) + "px");
+      el.style.setProperty("--ty", SP.ty.x.toFixed(2) + "px");
+      sRaf = requestAnimationFrame(sFrame);
+    }
+    const sKick = () => { if (!sRaf) { sLast = 0; sRaf = requestAnimationFrame(sFrame); } };
     function stretch(sx, sy, tx, ty, t) {
+      if (SP) {
+        const k = o.gain;
+        SP.sx.to = 1 + (sx - 1) * k;
+        SP.sy.to = 1 + (sy - 1) * k;
+        SP.tx.to = tx * k;
+        SP.ty.to = ty * k;
+        blur(t * k);
+        sKick();
+        return;
+      }
       el.style.setProperty("--sx", sx.toFixed(3));
       el.style.setProperty("--sy", sy.toFixed(3));
       el.style.setProperty("--tx", tx.toFixed(1) + "px");
@@ -1589,12 +1925,28 @@ function normalizeFlags(c) {
       blur(t);
     }
     function relax() {
+      if (SP) {
+        SP.sx.to = SP.sy.to = 1;
+        SP.tx.to = SP.ty.to = 0;
+        el.style.removeProperty("--gl");
+        unblur();
+        sKick();
+        return;
+      }
       for (const v of ["--sx", "--sy", "--tx", "--ty", "--gl"]) el.style.removeProperty(v);
       unblur();
     }
     let following = false;
     const g = {
-      sync(anim) { if (!following && !st) place(getCurrent(), anim); },
+      sync(anim) { if (active() && !following && !st) place(getCurrent(), anim); },
+      wake() {},
+      sleep() {
+        st = null;
+        following = false;
+        el.classList.remove("pressing", "dragging", "follow");
+        if (o.pauseFx) document.body.classList.remove("fx-drag");
+        relax();
+      },
       follow(a, b, p) {
         if (!a || !b || !a.offsetWidth || st) return;
         if (!following) { following = true; el.classList.add("follow"); }
@@ -1613,13 +1965,13 @@ function normalizeFlags(c) {
       }
     };
     if ("ResizeObserver" in window) {
-      const ro = new ResizeObserver(() => { if (!following && !st) place(getCurrent(), false); });
+      const ro = new ResizeObserver(() => { if (active() && !following && !st) place(getCurrent(), false); });
       ro.observe(el);
       for (const b of items()) ro.observe(b);
     }
     g.sync(false);
     el.addEventListener("pointerdown", (e) => {
-      if (e.button) return;
+      if (e.button || !active()) return;
       if (following) { following = false; el.classList.remove("follow"); }
       st = { x: e.clientX, y: e.clientY, id: e.pointerId, drag: false, hover: -1, lx: e.clientX, lt: performance.now(), vx: 0 };
       if (isPill) {
@@ -1641,6 +1993,7 @@ function normalizeFlags(c) {
           st.drag = true;
           try { el.setPointerCapture(st.id); } catch (err) {}
           el.classList.add("dragging");
+          if (o.pauseFx) document.body.classList.add("fx-drag");
           if (st.hover < 0) st.hover = items().indexOf(getCurrent());
         } else if (isPill && Math.abs(dy) > 6) {
           stretch(1 - Math.min(.06, Math.abs(dy) / 900), 1 + Math.min(.16, Math.abs(dy) / 420), 0, clamp(dy * .22, -26, 26), Math.abs(dy) / 70);
@@ -1682,6 +2035,7 @@ function normalizeFlags(c) {
         return;
       }
       el.classList.remove("dragging");
+      if (o.pauseFx) document.body.classList.remove("fx-drag");
       suppressUntil = performance.now() + 450;
       const b = items()[s.hover];
       if (!cancel && b && b !== getCurrent()) pick(b);
@@ -1690,19 +2044,31 @@ function normalizeFlags(c) {
     el.addEventListener("pointerup", (e) => end(e, false));
     el.addEventListener("pointercancel", (e) => end(e, true));
     el.addEventListener("click", (e) => {
+      if (!active()) return;
       if (performance.now() < suppressUntil) { e.preventDefault(); e.stopPropagation(); return; }
       const b = e.target.closest("button");
       if (b && b.parentElement === el && b !== getCurrent()) pick(b);
     });
     return g;
   }
+  function skinGlider(parts) {
+    let cur = "";
+    return {
+      sync(anim) {
+        const k = root.dataset.skin === "miuix" ? "mx" : "m3";
+        if (k !== cur) { if (cur) parts[cur].sleep(); parts[k].wake(); cur = k; anim = false; }
+        parts[k].sync(anim);
+      }
+    };
+  }
   const syncGliders = (anim) => { for (const k in G) G[k].sync(anim); };
   const PILL = { track: [0.1, 0.94], settle: [0.44, 0.74], stretch: [0.26, 0.58], lift: [0.32, 0.78] };
   function springGlider(el, getCurrent, pick, opts) {
-    const o = Object.assign({ speed: 1, blur: 1, contain: false, threshold: 6, tapSlow: 1, trackSpeed: 1 }, opts);
+    const o = Object.assign({ speed: 1, blur: 1, contain: false, threshold: 6, tapSlow: 1, trackSpeed: 1, skin: "" }, opts);
+    const active = () => !o.skin || root.dataset.skin === o.skin;
     let tapK = 1;
     const SETTLE = [PILL.settle[0] * o.speed, PILL.settle[1]], STRETCH = [PILL.stretch[0] * o.speed, PILL.stretch[1]], LIFT = [PILL.lift[0] * o.speed, PILL.lift[1]];
-    el.classList.add("spring");
+    if (active()) el.classList.add("spring");
     const ind = el.querySelector(".ind");
     const lens = document.createElement("span");
     lens.className = "lens";
@@ -1784,7 +2150,20 @@ function normalizeFlags(c) {
     }
     const kick = () => { if (!raf) { last = 0; raf = requestAnimationFrame(frame); } };
     const g = {
+      wake() { el.classList.add("spring"); },
+      sleep() {
+        if (raf) { cancelAnimationFrame(raf); raf = 0; }
+        st = null; travel = false; placed = false; last = 0; lastBk = -1;
+        for (const sp of [lift, dg]) snapSpring(sp, 0);
+        el.classList.remove("spring", "dragging");
+        if (o.pauseFx) document.body.classList.remove("fx-drag");
+        ind.style.width = ind.style.transform = "";
+        ind.style.removeProperty("--gs");
+        lens.style.width = lens.style.transform = lens.style.opacity = "";
+        lens.style.removeProperty("--bk");
+      },
       sync(anim) {
+        if (!active()) return;
         const b = getCurrent();
         if (!b || !b.offsetWidth) return;
         if (st && st.drag) return;
@@ -1808,12 +2187,12 @@ function normalizeFlags(c) {
       new ResizeObserver(() => {
         if (el.clientWidth === rw) return;
         rw = el.clientWidth;
-        if (!st && !raf) g.sync(false);
+        if (active() && !st && !raf) g.sync(false);
       }).observe(el);
     }
     g.sync(false);
     el.addEventListener("pointerdown", (e) => {
-      if (e.button) return;
+      if (e.button || !active()) return;
       const r = el.getBoundingClientRect();
       const bs = items();
       const geo = bs.map((b) => ({ c: mid(b), w: b.offsetWidth }));
@@ -1879,6 +2258,7 @@ function normalizeFlags(c) {
     el.addEventListener("pointerup", (e) => end(e, false));
     el.addEventListener("pointercancel", (e) => end(e, true));
     el.addEventListener("click", (e) => {
+      if (!active()) return;
       if (performance.now() < suppressUntil) { e.preventDefault(); e.stopPropagation(); return; }
       const b = e.target.closest("button");
       if (b && b.parentElement === el && b !== getCurrent()) pick(b);
@@ -1970,6 +2350,160 @@ function normalizeFlags(c) {
       if (e.detail > 0 && root.dataset.skin === "miuix" && !reduceMotion.matches) return;
       history.back();
     });
+  }
+  let glowEl = null;
+  function glowAt(x, y, a, k) {
+    if (!glowEl) {
+      glowEl = document.createElement("div");
+      glowEl.className = "mx-glow";
+      glowEl.setAttribute("aria-hidden", "true");
+      glowEl.hidden = true;
+      document.body.appendChild(glowEl);
+    }
+    if (a <= 0.002) { glowEl.hidden = true; return; }
+    glowEl.hidden = false;
+    glowEl.style.transform = "translate3d(" + x.toFixed(1) + "px," + y.toFixed(1) + "px,0) scale(" + (k || 1).toFixed(4) + ")";
+    glowEl.style.opacity = a.toFixed(3);
+  }
+  function stretchyGlass(host, opts) {
+    const o = Object.assign({ glow: false, stretch: true, grow: 9, cap: 16, blur: 4, pick: null, skip: null, press: 0 }, opts);
+    const tx = mkSpring(0), ty = mkSpring(0), ex = mkSpring(0), gl = mkSpring(0), gx = mkSpring(0), gy = mkSpring(0), gs = mkSpring(1), pz = mkSpring(1);
+    const SQUASH = 0.3, GLOW_DRAG = 0.2, GLOW_EASE = 280;
+    const rub = (d) => o.cap * (1 - 1 / (d / o.cap * 0.55 + 1));
+    let el = null, st = null, raf = 0, last = 0, lastBl = -1, live = false, ux = 1, uy = 0, box = null, swallow = 0, fx = 0, fy = 0;
+    if (!o.pick && o.stretch) host.classList.add("stretchy");
+    function clear() {
+      if (o.glow) glowAt(0, 0, 0);
+      if (!el) return;
+      el.style.transform = "";
+      if (o.press) { el.style.translate = ""; el.style.scale = ""; }
+      el.style.removeProperty("--sbl");
+      el.classList.remove("stretching", "s-blur");
+      lastBl = -1;
+    }
+    function draw() {
+      if (live) {
+        const e = Math.max(0, ex.x);
+        const sx = 1 + (e * Math.abs(ux) - e * SQUASH * Math.abs(uy)) / box.w;
+        const sy = 1 + (e * Math.abs(uy) - e * SQUASH * Math.abs(ux)) / box.h;
+        if (o.press) {
+          el.style.translate = tx.x.toFixed(2) + "px " + ty.x.toFixed(2) + "px";
+          el.style.scale = (sx * pz.x).toFixed(4) + " " + (sy * pz.x).toFixed(4);
+        } else el.style.transform = "translate3d(" + tx.x.toFixed(2) + "px," + ty.x.toFixed(2) + "px,0) scale(" + sx.toFixed(4) + "," + sy.toFixed(4) + ")";
+        const bl = Math.round(clamp(e / o.grow, 0, 1) * o.blur * 4) / 4;
+        if (bl !== lastBl) { lastBl = bl; el.classList.toggle("s-blur", bl > 0); el.style.setProperty("--sbl", bl + "px"); }
+      }
+      if (o.glow) glowAt(gx.x, gy.x, clamp(gl.x, 0, 1), gs.x);
+    }
+    function frame(now) {
+      raf = 0;
+      const dt = Math.min(0.034, last ? (now - last) / 1000 : 1 / 60);
+      last = now;
+      const held = !!(st && st.drag);
+      const mv = held ? [0.14, 0.9] : [0.42, 0.52];
+      stepSpring(tx, dt, mv[0], mv[1]);
+      stepSpring(ty, dt, mv[0], mv[1]);
+      stepSpring(ex, dt, held ? 0.2 : 0.42, held ? 0.86 : 0.5);
+      stepSpring(gl, dt, st ? 0.2 : 0.3, 1);
+      if (o.press) stepSpring(pz, dt, 0.3, st ? 0.72 : 0.55);
+      if (!st) { stepSpring(gx, dt, 0.16, 0.88); stepSpring(gy, dt, 0.16, 0.88); stepSpring(gs, dt, 0.16, 1); }
+      draw();
+      if (st || !springIdle(tx, 0.05) || !springIdle(ty, 0.05) || !springIdle(ex, 0.05) || !springIdle(gl, 0.004) || (o.press && !springIdle(pz, 0.0008)) || (gl.x > 0.004 && (!springIdle(gx, 0.5) || !springIdle(gy, 0.5)))) {
+        raf = requestAnimationFrame(frame);
+        return;
+      }
+      last = 0;
+      for (const sp of [tx, ty, ex, gl, pz]) snapSpring(sp, sp.to);
+      live = false;
+      clear();
+    }
+    const kick = () => { if (!raf) { last = 0; raf = requestAnimationFrame(frame); } };
+    function aim(e) {
+      fx = e.clientX;
+      fy = e.clientY;
+      if (!st || !st.drag) return;
+      const dx = fx - st.x, dy = fy - st.y, d = Math.hypot(dx, dy);
+      if (d < 0.5) return;
+      const k = 1 - GLOW_DRAG * d / (d + GLOW_EASE);
+      fx = st.x + dx * k;
+      fy = st.y + dy * k;
+    }
+    function follow(e) {
+      aim(e);
+      snapSpring(gs, 1);
+      snapSpring(gx, fx);
+      snapSpring(gy, fy);
+    }
+    host.addEventListener("pointerdown", (e) => {
+      if (e.button || st || root.dataset.skin !== "miuix" || reduceMotion.matches) return;
+      const t = o.pick ? o.pick(e.target) : host;
+      if (!t || (o.skip && o.skip(e))) return;
+      if (el && el !== t) {
+        if (raf) { cancelAnimationFrame(raf); raf = 0; }
+        for (const sp of [tx, ty, ex, gl]) snapSpring(sp, 0);
+        snapSpring(pz, 1);
+        live = false;
+        clear();
+      }
+      el = t;
+      if (o.stretch) el.classList.add("stretchy");
+      const r = el.getBoundingClientRect();
+      box = { w: Math.max(1, el.offsetWidth || r.width), h: Math.max(1, el.offsetHeight || r.height), cx: r.left + r.width / 2 - tx.x, cy: r.top + r.height / 2 - ty.x };
+      st = { x: e.clientX, y: e.clientY, id: e.pointerId, drag: false, max: 0 };
+      if (o.press) { pz.to = o.press; live = true; kick(); }
+      if (o.glow) { gl.to = 0.55; follow(e); kick(); }
+    });
+    host.addEventListener("pointermove", (e) => {
+      if (!st || e.pointerId !== st.id) return;
+      const dx = e.clientX - st.x, dy = e.clientY - st.y, d = Math.hypot(dx, dy);
+      st.max = Math.max(st.max, d);
+      if (!st.drag) {
+        follow(e);
+        if (d <= 6) return;
+        st.drag = true;
+        gl.to = 1;
+        if (!o.stretch) { kick(); return; }
+        live = true;
+        try { el.setPointerCapture(st.id); } catch (err) {}
+        el.classList.add("stretching");
+      }
+      if (!o.stretch) { follow(e); kick(); return; }
+      if (d > 0.5) { ux = dx / d; uy = dy / d; }
+      const r = rub(d);
+      tx.to = ux * r;
+      ty.to = uy * r;
+      const over = Math.max(0, d - 4);
+      ex.to = o.grow * (1 - 1 / (over / o.grow * 0.45 + 1));
+      follow(e);
+      kick();
+    });
+    const end = (e) => {
+      if (!st || e.pointerId !== st.id) return;
+      const s0 = st;
+      st = null;
+      tx.to = ty.to = ex.to = gl.to = 0;
+      pz.to = 1;
+      gx.to = box.cx;
+      gy.to = box.cy;
+      gs.to = 0.8;
+      if (s0.drag && s0.max > 12) swallow = performance.now() + 400;
+      if (s0.drag || o.glow || o.press) kick();
+    };
+    document.addEventListener("pointerup", end, true);
+    document.addEventListener("pointercancel", end, true);
+    host.addEventListener("click", (e) => {
+      if (performance.now() >= swallow) return;
+      swallow = 0;
+      e.preventDefault();
+      e.stopImmediatePropagation();
+    }, true);
+  }
+  function lensMap() {
+    const map = $("mxLensMap");
+    if (!map || !window.CSS || !(CSS.supports("backdrop-filter", "url(#mx-lens)") || CSS.supports("-webkit-backdrop-filter", "url(#mx-lens)"))) return;
+    const img = new Image();
+    img.onload = () => { map.setAttribute("href", "assets/lens-map.png"); root.classList.add("mx-lens"); };
+    img.src = "assets/lens-map.png";
   }
   function setSlider(id, v) {
     const inp = $(id);
@@ -2147,7 +2681,8 @@ function normalizeFlags(c) {
     s.classList.toggle("error", !!isError);
     s.style.translate = s.style.opacity = "";
     s.hidden = false;
-    requestAnimationFrame(() => s.classList.add("show"));
+    void s.offsetWidth;
+    requestAnimationFrame(() => requestAnimationFrame(() => s.classList.add("show")));
     clearTimeout(snackTimer);
     snackTimer = setTimeout(hideSnack, isError ? 5000 : undo ? 4000 : 1600);
   }
@@ -2204,6 +2739,46 @@ function normalizeFlags(c) {
     s.addEventListener("pointerup", end);
     s.addEventListener("pointercancel", end);
   })();
+  const MH = { on: false, back: null, pops: 0, want: null, waits: [] };
+  function mhPush(onBack) {
+    if (MH.pops) { MH.want = onBack; return; }
+    MH.back = onBack;
+    if (MH.on) return;
+    MH.on = true;
+    history.pushState({ v: stack.slice(), mh: 1 }, "");
+  }
+  function mhPop() {
+    return new Promise((ok) => {
+      MH.want = null;
+      if (!MH.on) { if (MH.pops) MH.waits.push(ok); else ok(); return; }
+      MH.on = false;
+      MH.back = null;
+      MH.pops++;
+      MH.waits.push(ok);
+      history.back();
+      setTimeout(() => { if (MH.pops) { MH.pops = 0; mhSettle(); } }, 700);
+    });
+  }
+  function mhSettle() {
+    const w = MH.waits;
+    MH.waits = [];
+    for (const f of w) f();
+    if (MH.want) { const f = MH.want; MH.want = null; mhPush(f); }
+  }
+  window.addEventListener("popstate", (e) => {
+    if (MH.pops) {
+      MH.pops--;
+      e.stopImmediatePropagation();
+      if (!MH.pops) mhSettle();
+      return;
+    }
+    if (!MH.on) return;
+    MH.on = false;
+    e.stopImmediatePropagation();
+    const f = MH.back;
+    MH.back = null;
+    if (f) f();
+  }, true);
   let dlgResolve = null, dlgReturn = null;
   function dialog({ title, body, buttons, warn, icon, lvl, extra, check, sheet }) {
     return new Promise((resolve) => {
@@ -2241,12 +2816,15 @@ function normalizeFlags(c) {
       for (const btn of buttons) {
         const el = document.createElement("button");
         el.className = "btn " + (btn.kind || "secondary");
-        el.textContent = btn.label;
+        const lbl = document.createElement("span");
+        lbl.textContent = btn.label;
+        el.appendChild(lbl);
         el.onclick = () => closeDialog(btn.value);
         acts.appendChild(el);
       }
       dlgResolve = resolve;
       openScrim($("dlg"));
+      mhPush(() => closeDialog(undefined));
       requestAnimationFrame(() => {
         const box = document.querySelector("#dlg .dialog");
         box.classList.toggle("scrollable", box.scrollHeight > box.clientHeight + 2);
@@ -2339,7 +2917,7 @@ function normalizeFlags(c) {
     const r = dlgResolve;
     dlgResolve = null;
     if (dlgReturn && dlgReturn.focus) dlgReturn.focus({ preventScroll: true });
-    if (r) r(v);
+    mhPop().then(() => { if (r) r(v); });
   }
   let tapGate = 0;
   function lockBehind(on) {
@@ -2395,7 +2973,7 @@ function normalizeFlags(c) {
   $("dlg").addEventListener("pointerdown", (e) => { if (e.target === $("dlg") && !e.button) { swallowNextClick(); closeDialog(undefined); } });
   document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("dlg").hidden) closeDialog(undefined); });
   const DD_OPTS = {
-    skin: { get: () => S.ui.skin, set: (v) => setSkin(v), later: true, items: [["miuix", "Miuix"], ["m3e", "Material 3 Expressive"]] },
+    skin: { get: () => S.ui.skin, set: (v) => setSkin(v), later: false, snap: true, items: [["miuix", "Miuix"], ["m3e", "Material 3 Expressive"]] },
     theme: { get: () => S.ui.theme, set: (v) => setTheme(v), later: false, items: [["system", "System default"], ["light", "Light"], ["dark", "Dark"]] }
   };
   const DD_RADIUS = 40;
@@ -2409,11 +2987,13 @@ function normalizeFlags(c) {
     return parseFloat(getComputedStyle(root).getPropertyValue(name)) || 0;
   }
   function ddReopen() {
+    clearTimeout(dd.timer);
     dd.blurOff = 0;
     dd.closing = false;
     dd.picked = undefined;
     $("ddLayer").classList.remove("out");
     lockSoon();
+    mhPush(ddBack);
     dd.trig.classList.add("morph");
     const cur = dd.opt.get();
     for (const b of $("ddList").children) b.setAttribute("aria-selected", b.dataset.val === cur ? "true" : "false");
@@ -2458,6 +3038,7 @@ function normalizeFlags(c) {
     list.style.cssText = "";
     layer.hidden = false;
     lockSoon();
+    mhPush(ddBack);
     trig.classList.add("open");
     trig.setAttribute("aria-expanded", "true");
     haptic("tick");
@@ -2581,6 +3162,7 @@ function normalizeFlags(c) {
   }
   function ddClose(v, instant) {
     if (!dd.open || (dd.closing && !instant)) return;
+    if (!dd.closing) mhPop();
     dd.closing = true;
     dd.picked = v;
     dd.drag = null;
@@ -2594,6 +3176,8 @@ function normalizeFlags(c) {
       cancelAnimationFrame(dd.raf);
       dd.t0 = performance.now();
       dd.raf = requestAnimationFrame(ddFrame);
+      clearTimeout(dd.timer);
+      dd.timer = setTimeout(() => { if (dd.open && dd.closing) ddFinish(); }, 900);
     } else {
       $("ddLayer").classList.remove("show");
       dd.timer = setTimeout(ddFinish, 112.5);
@@ -2619,9 +3203,18 @@ function normalizeFlags(c) {
     try { trig.focus({ preventScroll: true }); } catch (e) {}
     if (o.later && v !== undefined && v !== o.get()) o.set(v);
   }
+  function ddBack() {
+    ddClose(undefined);
+  }
   function ddPick(v) {
     if (!dd.open || dd.closing) return;
     haptic("click");
+    if (dd.opt.snap) {
+      const o = dd.opt;
+      ddClose(undefined, true);
+      if (v !== o.get()) setTimeout(() => o.set(v), 0);
+      return;
+    }
     if (!dd.opt.later && v !== dd.opt.get()) dd.opt.set(v);
     ddClose(v);
   }
@@ -2734,16 +3327,21 @@ function normalizeFlags(c) {
   window.addEventListener("resize", () => ddClose(undefined, true));
   window.addEventListener("popstate", () => ddClose(undefined, true));
   document.addEventListener("visibilitychange", () => { if (document.hidden) ddClose(undefined, true); });
+  function busyBack() {
+    mhPush(busyBack);
+  }
   async function withBusy(title, body, fn) {
     $("busyTitle").textContent = title;
     $("busyBody").textContent = body;
     openScrim($("busy"));
+    mhPush(busyBack);
     await paint();
     const t0 = Date.now();
     let r;
     try { r = await fn(); } finally {
       await new Promise((ok) => setTimeout(ok, Math.max(0, 900 - (Date.now() - t0))));
       closeScrim($("busy"));
+      await mhPop();
     }
     return r;
   }
@@ -2784,7 +3382,17 @@ function normalizeFlags(c) {
       gr.style.opacity = ((a + b) / 2).toFixed(3);
     }
     function set(q) { ensure(); stop(); el.hidden = false; paint(q); }
-    function off() { if (!el) return; stop(); el.hidden = true; paint(0); }
+    let held = false;
+    function hold(v) { held = v; }
+    function off() { if (held || !el) return; stop(); el.hidden = true; paint(0); }
+    let pre = null;
+    function warm() {
+      ensure();
+      if (pre) return;
+      pre = new Image();
+      pre.src = "assets/grain.png";
+      if (pre.decode) pre.decode().catch(() => {});
+    }
     function animate(from, to, duration, easing) {
       ensure(); stop(); el.hidden = false; paint(to);
       const n = 10, fa = [], fb = [], fg = [];
@@ -2800,7 +3408,7 @@ function normalizeFlags(c) {
       anims = [lo.animate(fa, { duration, easing }), hi.animate(fb, { duration, easing }), gr.animate(fg, { duration, easing })];
       return anims.slice();
     }
-    return { set, off, animate };
+    return { set, off, animate, warm, hold };
   })();
   const kindOf = (v) => v.split(":")[0];
   const argOf = (v) => v.slice(v.indexOf(":") + 1);
@@ -2820,7 +3428,8 @@ function normalizeFlags(c) {
     el.setAttribute("aria-hidden", off ? "true" : "false");
     fxInvalidate();
   }
-  let tseq = 0;
+  let tseq = 0, navBusy = false;
+  let swipeJob = null, swipeCommitting = false;
   const tabFxState = new WeakMap();
   function tabFx(el, x) {
     let s = tabFxState.get(el);
@@ -2869,9 +3478,11 @@ function normalizeFlags(c) {
     }
   }
   const FX_RESUME = 70;
-  let fxHoldT = 0, fxTabT = 0;
+  let fxHoldT = 0;
   function transition(from, to, dir) {
+    if (swipeJob && !swipeCommitting) settleSwipe();
     const my = ++tseq;
+    navBusy = true;
     for (const a of running) a.cancel();
     running = [];
     clearTabFx(document.body.classList.contains("swiping"));
@@ -2898,14 +3509,10 @@ function normalizeFlags(c) {
       if (dir === "instant" || reduceMotion.matches) document.body.classList.remove("fx-hold");
       else fxHoldT = setTimeout(() => { if (!isSub(top())) document.body.classList.remove("fx-hold"); }, FX_RESUME);
     }
-    if (fromEl === toEl) return;
+    if (fromEl === toEl) { navBusy = false; syncMotion(); return; }
     const anim = dir !== "instant" && !reduceMotion.matches;
     if (anim) for (const el of [fromEl, toEl]) el.classList.add("swipe-layer");
-    if (anim && tab) {
-      for (const el of [fromEl, toEl]) el.classList.add("tab-transit", "fx-hold");
-      clearTimeout(fxTabT);
-      fxTabT = setTimeout(() => { for (const el of [fromEl, toEl]) el.classList.remove("fx-hold"); }, FX_RESUME);
-    }
+    if (anim && tab) for (const el of [fromEl, toEl]) el.classList.add("tab-transit", "fx-hold");
     setOff(toEl, false);
     if (dir !== "instant") fromEl.inert = true;
     for (const k in G) if (k !== "nav" || isSub(to)) G[k].sync(false);
@@ -2913,12 +3520,13 @@ function normalizeFlags(c) {
     onScroll(toEl);
     const done = () => {
       if (my !== tseq) return;
+      navBusy = false;
       clearTabFx(document.body.classList.contains("swiping"));
       document.body.classList.toggle("sub-open", isSub(top()));
       if (!isSub(top())) document.body.classList.remove("fx-hold");
       setOff(fromEl, true);
-      fromEl.classList.remove("on-top");
-      toEl.classList.remove("on-top");
+      fromEl.classList.remove("on-top", "fx-hold");
+      toEl.classList.remove("on-top", "fx-hold");
       running = [];
       Veil.off();
     };
@@ -2991,7 +3599,6 @@ function normalizeFlags(c) {
   const lockClick = () => { swipeClick = true; swipeClickUntil = performance.now() + 400; };
   document.addEventListener("pointerdown", () => { swipeClick = false; }, true);
   const noLeftSwipe = (el) => el === SCREENS.app || el === SCREENS.licenses;
-  let swipeJob = null;
   function settleSwipe() {
     const j = swipeJob;
     if (!j) return;
@@ -2999,17 +3606,132 @@ function normalizeFlags(c) {
     for (const an of j.anims) an.cancel();
     j.finish();
   }
+  const paneOk = () => S.loaded && !S.rec;
+  let tabLand = null;
+  function fxTimes(fx) {
+    const rps = [...fx.querySelectorAll(".rp")], out = [];
+    for (const a of fx.getAnimations({ subtree: true })) {
+      const ef = a.effect, t = ef && ef.target;
+      out.push({ i: t === fx ? -1 : rps.indexOf(t), ps: (ef && ef.pseudoElement) || "", n: a.animationName, t: a.currentTime });
+    }
+    return out;
+  }
+  function fxSeek(fx, saved) {
+    const rps = [...fx.querySelectorAll(".rp")];
+    for (const a of fx.getAnimations({ subtree: true })) {
+      const ef = a.effect, t = ef && ef.target, i = t === fx ? -1 : rps.indexOf(t), ps = (ef && ef.pseudoElement) || "";
+      const s = saved.find((x) => x.i === i && x.ps === ps && x.n === a.animationName);
+      if (s && s.t !== null) a.currentTime = s.t;
+    }
+  }
+  function fxFreeze(fx) {
+    if (fx._fz || !fx.isConnected) return false;
+    fx._fz = fxTimes(fx);
+    const b = getComputedStyle(fx, "::before"), af = getComputedStyle(fx, "::after");
+    fx.style.setProperty("--fzb", b.transform);
+    fx.style.setProperty("--fza", af.transform);
+    fx.style.setProperty("--fzo", af.opacity);
+    for (const r of fx.querySelectorAll(".rp")) {
+      const cs = getComputedStyle(r);
+      r.style.transform = cs.transform;
+      r.style.opacity = cs.opacity;
+      r.style.animation = "none";
+    }
+    fx.classList.add("fz");
+    return true;
+  }
+  function fxThaw(fx) {
+    const saved = fx._fz;
+    fx._fz = null;
+    fx.classList.remove("fz");
+    for (const k of ["--fzb", "--fza", "--fzo"]) fx.style.removeProperty(k);
+    for (const r of fx.querySelectorAll(".rp")) r.style.transform = r.style.opacity = r.style.animation = "";
+    if (saved && fx.isConnected) fxSeek(fx, saved);
+  }
+  function fxFreezeIn(roots) {
+    const out = [];
+    if (S.ui.bubbles === false || reduceMotion.matches) return out;
+    for (const el of roots) if (el) for (const fx of el.querySelectorAll(".fx-live:not(.fx-off) > .opt-fx")) if (fxFreeze(fx)) out.push(fx);
+    return out;
+  }
+  function paneTarget(scr, y, panel) {
+    const bar = scr.querySelector(".topbar");
+    const top = panel.getBoundingClientRect().top - scr.getBoundingClientRect().top + scr.scrollTop;
+    return Math.min(y, Math.max(0, top - (bar ? bar.offsetHeight : 0)));
+  }
+  function quietTab(tab) {
+    S.tab = tab;
+    renderTabs();
+    if (G.tabs) G.tabs.sync(false);
+    renderList();
+  }
+  function calmScroll(scr, fn) {
+    if (!KB.sc) KB.sc = -1;
+    fn();
+    if (atTop(scr)) edgeBuzz.set(scr, "top");
+    else if (atBottom(scr)) edgeBuzz.set(scr, "bottom");
+    requestAnimationFrame(() => requestAnimationFrame(() => { if (KB.sc === -1) KB.sc = 0; }));
+  }
+  function paneGhost(scr, tab) {
+    const keep = S.tab;
+    S.tab = tab;
+    let m;
+    try { m = listModel(); } finally { S.tab = keep; }
+    const panel = $("listPanel"), wrap = panel.parentElement, g = panel.cloneNode(true);
+    const part = (id) => g.querySelector("#" + id);
+    const copy = (r, t) => {
+      updateRow(r, t);
+      const c = r.el.cloneNode(true);
+      c.classList.remove("fx-off");
+      c.style.translate = "";
+      const sf = r.el.querySelector(":scope > .opt-fx"), cf = c.querySelector(":scope > .opt-fx");
+      if (sf && cf && sf._fz) cf._fz = sf._fz;
+      for (const img of c.querySelectorAll("img[data-src]")) { img.onerror = () => img.remove(); img.src = img.dataset.src; delete img.dataset.src; }
+      return c;
+    };
+    part("devGroup").replaceChildren(...m.dev.map((a) => copy(rowFor(a))));
+    part("devGroup").hidden = part("devLbl").hidden = !m.dev.length;
+    part("list").replaceChildren(...m.items.slice(0, 40).map((x) => copy(rowFor(x.app), x.t)));
+    part("list").hidden = !m.items.length;
+    paintEmpty(m, tab, part);
+    part("empty").style.minHeight = "";
+    g.removeAttribute("id");
+    g.removeAttribute("role");
+    g.setAttribute("aria-hidden", "true");
+    g.inert = true;
+    const wr = wrap.getBoundingClientRect(), pr = panel.getBoundingClientRect();
+    Object.assign(g.style, { position: "absolute", margin: "0", left: (pr.left - wr.left) + "px", top: (pr.top - wr.top) + "px", width: pr.width + "px", pointerEvents: "none", willChange: "transform" });
+    wrap.appendChild(g);
+    const y = scr.scrollTop, sp = wrap.querySelector(".nav-spacer"), ge = part("empty");
+    if (!ge.hidden && !document.body.classList.contains("kb-open")) {
+      const room = scr.clientHeight - (pr.top - scr.getBoundingClientRect().top + y + ge.offsetTop) - (sp ? sp.offsetHeight : 0);
+      if (room > ge.offsetHeight) ge.style.minHeight = Math.floor(room) + "px";
+    }
+    let T = paneTarget(scr, y, panel);
+    if (m.items.length <= 40 && sp) {
+      const natural = sp.getBoundingClientRect().bottom - wr.top - pr.height + g.offsetHeight;
+      T = Math.min(T, Math.max(0, Math.max(parseFloat(wrap.style.minHeight) || 0, natural) - scr.clientHeight));
+    }
+    T = Math.max(0, Math.round(T));
+    g.style.top = (pr.top - wr.top + y - T) + "px";
+    panel.style.willChange = "transform";
+    const fz = fxFreezeIn([g]);
+    for (const fx of g.querySelectorAll(".opt-fx.fz")) if (!fz.includes(fx)) fz.push(fx);
+    return { panel, ghost: g, T, pw: scr.clientWidth || W(), gfz: fz };
+  }
   function pageSwipe(scr) {
     let st = null;
     const setX = (el, x) => { el.style.transform = x ? "translateX(" + x + "px)" : ""; };
-    let down = null;
+    let down = null, hdr = false;
     scr.addEventListener("pointerdown", (e) => {
       settleSwipe();
       down = { x: e.clientX, y: e.clientY };
+      const ph = scr.querySelector(".page-head");
+      hdr = !!ph && e.clientY < ph.getBoundingClientRect().bottom;
       if (e.button || document.body.classList.contains("modal") || scr.hasAttribute("data-off")) return;
-      if (e.target.closest(".glider, .slider, input, .snackbar, .back-btn")) return;
+      if (e.target.closest(".glider, .slider, input, .snackbar, .back-btn") || (root.dataset.skin === "miuix" && e.target.closest(".stretchy, .swatch.empty-sw"))) return;
       if (e.clientX < 24 || e.clientX > W() - 24) return;
-      st = { x: e.clientX, y: e.clientY, t: performance.now(), id: e.pointerId, mode: null, samples: [{ t: performance.now(), x: e.clientX }] };
+      st = { x: e.clientX, y: e.clientY, hdr, t: performance.now(), id: e.pointerId, mode: null, samples: [{ t: performance.now(), x: e.clientX }] };
     });
     scr.addEventListener("pointermove", (e) => {
       if (!st || e.pointerId !== st.id) return;
@@ -3019,7 +3741,7 @@ function normalizeFlags(c) {
       while (st.samples.length > 2 && now - st.samples[0].t > 100) st.samples.shift();
       if (!st.mode) {
         if (Math.abs(dy) > 10 && Math.abs(dy) > Math.abs(dx)) { st = null; return; }
-        if (Math.abs(dx) < 8 || Math.abs(dx) < Math.abs(dy) * 1.15) return;
+        if (Math.abs(dx) < 6 || Math.abs(dx) < Math.abs(dy) * 1.15) return;
         for (const a of running) a.cancel();
         running = [];
         const cur = top();
@@ -3028,17 +3750,34 @@ function normalizeFlags(c) {
           st.mode = "back"; st.other = elOf(stack[stack.length - 2]);
           st.fx = backFx();
         }
+        else if (kindOf(cur) === "home" && paneOk() && !st.hdr && (S.tab === "all" ? dx < 0 : dx > 0)) { st.mode = "pane"; st.to = S.tab === "all" ? "on" : "all"; }
         else if (kindOf(cur) === "home" && dx < 0) { st.mode = "tab"; st.other = SCREENS.settings; st.to = "settings"; st.nav = "home"; }
-        else if (kindOf(cur) === "settings" && dx > 0) { st.mode = "tab"; st.other = SCREENS.home; st.to = "home"; st.nav = "settings"; }
+        else if (kindOf(cur) === "settings" && dx > 0) {
+          st.mode = "tab"; st.other = SCREENS.home; st.to = "home"; st.nav = "settings";
+          if (paneOk() && S.tab !== "on") {
+            const home = SCREENS.home;
+            st.flip = { tab: S.tab, y: home.scrollTop };
+            const y = paneTarget(home, home.scrollTop, $("listPanel"));
+            calmScroll(home, () => { quietTab("on"); home.scrollTop = y; });
+          }
+        }
         else { st = null; return; }
+        lpCancel();
         clearTabFx(false);
         onScroll(scr);
         if (st.other) { setOff(st.other, false); onScroll(st.other); }
         if (st.fx) { st.q = 1; Veil.set(1); }
-        if (st.mode === "back") scr.classList.add("on-top");
-        if (st.mode === "tab") { clearTimeout(fxTabT); scr.classList.add("tab-transit", "fx-hold"); st.other.classList.add("tab-transit", "fx-hold"); }
+        if (st.mode === "back") scr.classList.add("on-top", "fx-hold");
+        if (st.mode === "tab") { scr.classList.add("tab-transit", "fx-hold"); st.other.classList.add("tab-transit", "fx-hold"); }
+        if (st.mode === "pane") {
+          const fz = fxFreezeIn([$("listPanel")]);
+          Object.assign(st, paneGhost(scr, st.to));
+          st.fz = fz.concat(st.gfz);
+          document.body.classList.add("fx-drag");
+        }
         try { scr.setPointerCapture(st.id); } catch (err) {}
-        scr.classList.add("swiping", "swipe-layer");
+        scr.classList.add("swiping");
+        if (st.mode !== "pane") scr.classList.add("swipe-layer");
         if (st.other) st.other.classList.add("swipe-layer");
         document.body.classList.add("swiping");
         st.x = e.clientX - Math.sign(dx) * 4;
@@ -3066,6 +3805,10 @@ function normalizeFlags(c) {
         const kind = Math.abs(dd) > W() / 2 ? st.to : kindOf(top());
         if (kind !== st.nav) { st.nav = kind; setNavCurrent(kind); }
         if (G.nav) G.nav.follow(navBtn(kindOf(top())), navBtn(st.to), Math.abs(dd) / W());
+      } else if (st.mode === "pane") {
+        const dd = st.to === "on" ? Math.min(0, d) : Math.max(0, d);
+        setX(st.panel, dd);
+        setX(st.ghost, dd + (st.to === "on" ? st.pw : -st.pw));
       }
     }
     const end = (e, cancel) => {
@@ -3076,7 +3819,7 @@ function normalizeFlags(c) {
       if (s0.raf) cancelAnimationFrame(s0.raf);
       scr.classList.remove("swiping");
       document.body.classList.remove("swiping");
-      const unlayer = () => { if (document.body.classList.contains("swiping")) return; scr.classList.remove("swipe-layer"); if (s0.other) s0.other.classList.remove("swipe-layer"); };
+      const unlayer = () => { if (document.body.classList.contains("swiping") || running.length) return; scr.classList.remove("swipe-layer"); if (s0.other) s0.other.classList.remove("swipe-layer"); };
       setTimeout(unlayer, 340);
       lockClick();
       const d = e.clientX - s0.x;
@@ -3087,13 +3830,40 @@ function normalizeFlags(c) {
       const cur = (el) => el.style.transform || "translateX(0px)";
       const anim = (el, to) => el.animate([{ transform: cur(el) }, { transform: to }], { duration: 300, easing: ease, fill: "forwards" });
       const veilTo = (q) => { if (s0.fx) Veil.animate(s0.q, q, 300, ease); };
-      const tabSw = s0.mode === "tab";
-      const fling = Math.abs(v) > (tabSw ? .18 : .45) && Math.abs(d) > (tabSw ? 12 : 40) && Math.sign(v) === Math.sign(d);
-      const far = Math.abs(d) > W() * (tabSw ? .1 : .3);
+      const tabSw = s0.mode === "tab", paneSw = s0.mode === "pane", easy = tabSw || paneSw;
+      const fling = Math.abs(v) > (easy ? .1 : .45) && Math.abs(d) > (easy ? 8 : 40) && Math.sign(v) === Math.sign(d);
+      const far = Math.abs(d) > W() * (easy ? .06 : .3);
       const tabGo = tabSw && !cancel && (far || fling) && Math.sign(d) === (s0.to === "settings" ? -1 : 1);
-      if (tabSw) { scr.classList.remove("fx-hold"); if (s0.other) s0.other.classList.remove("fx-hold"); }
-      let anims, commit;
-      if (s0.mode === "back" && !cancel && (far || fling) && !(noLeftSwipe(scr) && d < 0)) {
+      const paneGo = paneSw && !cancel && (far || fling) && Math.sign(d) === (s0.to === "on" ? -1 : 1);
+      if (paneSw) document.body.classList.remove("fx-drag");
+      if (s0.fz) for (const fx of s0.fz) fxThaw(fx);
+      if (paneGo) { tabLand = s0.to; renderTabs(); haptic("tick"); }
+      let anims, commit, early = null;
+      if (paneSw) {
+        const out = s0.to === "on" ? -s0.pw : s0.pw;
+        anims = paneGo ? [anim(s0.panel, "translateX(" + out + "px)"), anim(s0.ghost, "translateX(0)")]
+          : [anim(s0.panel, "translateX(0)"), anim(s0.ghost, "translateX(" + -out + "px)")];
+        commit = () => {
+          if (paneGo) {
+            const live = new Map();
+            for (const fx of s0.ghost.querySelectorAll(".app-row > .opt-fx")) live.set(fx.parentElement.dataset.pkg, fxTimes(fx));
+            calmScroll(scr, () => { tabLand = null; S.tab = s0.to; renderTabs(); renderList(); scr.scrollTop = s0.T; });
+            const vh = window.innerHeight;
+            for (const fx of s0.panel.querySelectorAll(".app-row > .opt-fx")) {
+              const t = live.get(fx.parentElement.dataset.pkg);
+              if (!t) continue;
+              const r = fx.parentElement.getBoundingClientRect();
+              if (r.bottom > -60 && r.top < vh + 60) fx.parentElement.classList.remove("fx-off");
+              fxSeek(fx, t);
+            }
+            onScroll(scr);
+          }
+          s0.ghost.remove();
+          setX(s0.panel, 0);
+          s0.panel.style.willChange = "";
+          fxInvalidate();
+        };
+      } else if (s0.mode === "back" && !cancel && (far || fling) && !(noLeftSwipe(scr) && d < 0)) {
         const out = d < 0 ? -W() : W();
         scr.inert = true;
         anims = [anim(scr, "translateX(" + out + "px)"), anim(s0.other, "translateX(0)")];
@@ -3104,9 +3874,28 @@ function normalizeFlags(c) {
           $("pillnav").classList.remove("away");
           if (G.nav) G.nav.sync(false);
         }
+        let popped = false;
+        const popNow = () => {
+          if (popped) return;
+          popped = true;
+          swipeCommitting = true;
+          Veil.hold(true);
+          try { backInstant(); } finally { Veil.hold(false); swipeCommitting = false; }
+          if (!job.done) {
+            scr.removeAttribute("data-off");
+            scr.setAttribute("aria-hidden", "false");
+            scr.inert = true;
+            scr.classList.add("on-top", "swipe-layer");
+            s0.other.classList.add("swipe-layer");
+          }
+        };
+        early = popNow;
         commit = () => {
-          backInstant();
-          setX(scr, 0); setX(s0.other, 0); Veil.off();
+          popNow();
+          scr.classList.remove("fx-hold", "on-top");
+          setX(scr, 0); setX(s0.other, 0);
+          if (!stack.some((v) => elOf(v) === scr)) setOff(scr, true);
+          Veil.off();
         };
       } else if (tabGo) {
         anims = [anim(scr, "translateX(" + (s0.to === "settings" ? -W() : W()) + "px)"), anim(s0.other, "translateX(0)")];
@@ -3122,8 +3911,15 @@ function normalizeFlags(c) {
           if (tabSw) setNavCurrent(kindOf(top()));
           setX(scr, 0);
           if (s0.other) { setX(s0.other, 0); if (s0.other !== elOf(top())) setOff(s0.other, true); }
+          if (s0.flip && kindOf(top()) !== "home") {
+            const home = SCREENS.home, f = s0.flip;
+            let n = 0;
+            const back = () => { if (n++ < 12 && kindOf(top()) !== "home" && Math.abs(home.scrollTop - f.y) > 1) { calmScroll(home, () => { home.scrollTop = f.y; }); requestAnimationFrame(back); } };
+            calmScroll(home, () => quietTab(f.tab));
+            back();
+          }
           if (s0.fx) Veil.off();
-          scr.classList.remove("on-top");
+          scr.classList.remove("on-top", "fx-hold");
         };
       }
       if (tabSw) {
@@ -3131,10 +3927,11 @@ function normalizeFlags(c) {
         if (G.nav) G.nav.release(true);
       }
       if (tabSw) trackTabFx([scr, s0.other], [kindOf(top()), s0.to]);
-      if (tabSw) { const c0 = commit; commit = () => { c0(); clearTabFx(false); }; }
-      const job = { anims, done: false, finish() { if (job.done) return; job.done = true; if (swipeJob === job) swipeJob = null; for (const an of anims) an.cancel(); commit(); } };
+      if (tabSw) { const c0 = commit; commit = () => { c0(); clearTabFx(false); scr.classList.remove("fx-hold"); if (s0.other) s0.other.classList.remove("fx-hold"); }; }
+      const job = { anims, done: false, finish() { if (job.done) return; job.done = true; if (swipeJob === job) swipeJob = null; for (const an of anims) an.cancel(); navBusy = false; commit(); syncMotion(); } };
       swipeJob = job;
       Promise.all(anims.map((a) => a.finished)).then(() => job.finish(), () => {});
+      if (early) setTimeout(early, 0);
     };
     scr.addEventListener("pointerup", (e) => {
       if (down && Math.abs(e.clientX - down.x) > 12 && Math.abs(e.clientX - down.x) > Math.abs(e.clientY - down.y) * 1.15) lockClick();
@@ -3190,7 +3987,7 @@ function normalizeFlags(c) {
     go(next, dir);
   });
   for (const bar of document.querySelectorAll(".topbar")) {
-    for (let i = 0; i < 3; i++) {
+    for (let i = 0; i < 2; i++) {
       const l = document.createElement("i");
       l.className = "tb-pb";
       l.setAttribute("aria-hidden", "true");
@@ -3198,12 +3995,59 @@ function normalizeFlags(c) {
     }
   }
   for (const b of document.querySelectorAll(".back-btn")) stretchyBack(b);
+  lensMap();
+  for (const id of ["recentBtn", "sortBtn", "selFab", "selX"]) stretchyGlass($(id), { glow: true });
+  stretchyGlass($("swatches"), { glow: true, pick: (t) => t.closest(".swatch.empty-sw") });
+  stretchyGlass($("searchBox"), { glow: true, grow: 8.925, cap: 20, skip: (e) => document.activeElement === $("q") });
+  stretchyGlass($("tabs"), { glow: true, stretch: false });
+  $("tabs").classList.add("sprung");
+  for (const id of ["status", "modPill"]) stretchyGlass($(id), { glow: true, grow: 11.9, cap: 20 });
+  (() => {
+    const AMP = [2.73, 1.47, 0.4725], HOLD = 110;
+    const live = new Map();
+    let raf = 0, last = 0;
+    function frame(now) {
+      raf = 0;
+      const dt = Math.min(0.034, last ? (now - last) / 1000 : 1 / 60);
+      last = now;
+      const t = performance.now();
+      for (const [el, b] of live) {
+        if (!b.back && t >= b.at) { b.back = true; b.s.to = 0; }
+        if (b.back) stepSpring(b.s, dt, 0.42, 0.5); else stepSpring(b.s, dt, 0.16, 0.9);
+        if (b.back && springIdle(b.s, 0.02)) { el.style.translate = ""; live.delete(el); continue; }
+        el.style.translate = "0 " + b.s.x.toFixed(2) + "px";
+      }
+      if (live.size) raf = requestAnimationFrame(frame); else last = 0;
+    }
+    function push(el, amp) {
+      let b = live.get(el);
+      if (!b) { b = { s: mkSpring(0), back: false, at: 0 }; live.set(el, b); }
+      b.back = false;
+      b.s.to = amp;
+      b.at = performance.now() + HOLD;
+      if (!raf) { last = 0; raf = requestAnimationFrame(frame); }
+    }
+    document.addEventListener("click", (e) => {
+      if (root.dataset.skin !== "miuix" || reduceMotion.matches) return;
+      const row = e.target.closest && e.target.closest(".sw-row");
+      if (!row || row.disabled) return;
+      const rows = [...(row.closest(".screen") || document).querySelectorAll(".group > *, .small-title, .footnote, .list-note")].filter((r) => r.offsetHeight > 0);
+      const i = rows.indexOf(row);
+      if (i < 0) return;
+      for (let k = 1; k <= AMP.length; k++) {
+        if (rows[i + k]) push(rows[i + k], AMP[k - 1]);
+        if (rows[i - k]) push(rows[i - k], -AMP[k - 1]);
+      }
+    });
+  })();
+  stretchyGlass($("launchBtn"), { glow: true, grow: 11.9, cap: 20, press: 1.1 });
+  stretchyGlass($("dlgActions"), { glow: true, grow: 11.9, cap: 20, press: 1.1, pick: (t) => t.closest(".btn") });
   function fitCollapse(scr) {
     const bar = scr.querySelector(".topbar"), t = scr.querySelector(".large-title, .app-title");
     const wrap = scr.querySelector(":scope > .bounce");
     if (!bar || !t || !wrap || !scr.clientHeight) return;
     const need = Math.max(8, t.offsetTop + t.offsetHeight - bar.offsetHeight) + 36 + 12;
-    let mh = Math.ceil(scr.clientHeight + need) + "px";
+    let mh = Math.ceil(scr.clientHeight + (scr.classList.contains("is-scroff") ? 0 : need)) + "px";
     if (scr.id === "scrHome") {
       const q = $("q"), row = q.closest(".search-row");
       if (document.activeElement === q) {
@@ -3236,6 +4080,14 @@ function normalizeFlags(c) {
     const max = scr.scrollHeight - scr.clientHeight;
     const y = Math.min(Math.max(0, scr.scrollTop), max);
     const limit = t.offsetTop + t.offsetHeight - bar.offsetHeight;
+    if (scr.classList.contains("is-scroff")) {
+      if (scr.dataset.tp !== "0.000") { scr.dataset.tp = "0.000"; t.style.setProperty("--tp", "0.000"); }
+      if (scr.dataset.tc !== "0.000") { scr.dataset.tc = "0.000"; bar.style.setProperty("--tc", "0.000"); }
+      bar.classList.remove("show");
+      bar.classList.toggle("scrolled", y > 4);
+      bar.classList.toggle("lifted", y > 14);
+      return;
+    }
     const end = Math.max(8, limit), start = Math.max(0, end - 36);
     const p = clamp((y - start) / Math.max(1, end - start), 0, 1).toFixed(3);
     if (scr.dataset.tp !== p) { scr.dataset.tp = p; t.style.setProperty("--tp", p); }
@@ -3384,6 +4236,7 @@ function normalizeFlags(c) {
       if (on === stretched.has(scr)) return;
       if (on) { stretched.add(scr); bounceActive++; }
       else { stretched.delete(scr); bounceActive = Math.max(0, bounceActive - 1); onScroll(scr); }
+      document.body.classList.toggle("fx-bounce", bounceActive > 0);
     }
     let shown = 0;
     function paint() {
@@ -3569,7 +4422,7 @@ function normalizeFlags(c) {
       g = null;
       if (rk) { rk.end(); rk.reset(); }
       if (disabled() || e.touches.length !== 1) { stopSpring(); off = 0; paint(); return; }
-      if (e.target.closest(".slider, input:focus, .snackbar, .back-btn")) return;
+      if (e.target.closest(".slider, input:focus, .snackbar, .back-btn") || (root.dataset.skin === "miuix" && !reduceMotion.matches && e.target.closest(".stretchy, .swatch.empty-sw, .tabs"))) return;
       stopSpring();
       h = scr.clientHeight || h;
       const t = e.touches[0];
@@ -3663,7 +4516,7 @@ function normalizeFlags(c) {
   };
   $("emptyMore").onclick = () => {
     const kind = $("emptyMore").dataset.kind;
-    if (kind === "all") setTab("all");
+    if (kind === "all") { setRec(false); setTab("all"); }
     else if (kind === "sys" && !S.ui.sysApps) { $("rowSysApps").onclick(); renderList(); }
   };
   const syncClearQ = () => { $("clearQ").hidden = !(document.activeElement === $("q") || $("q").value); };
@@ -3778,7 +4631,7 @@ function normalizeFlags(c) {
     document.addEventListener("pointerup", wait, true);
     document.addEventListener("pointercancel", wait, true);
   });
-  const TABS = ["all", "on", "recent"];
+  const TABS = ["all", "on"];
   function setTab(tab, focus) {
     if (S.tab === tab) return;
     S.tab = tab;
@@ -3789,8 +4642,8 @@ function normalizeFlags(c) {
   }
   $("tabs").addEventListener("keydown", (e) => {
     const i = TABS.indexOf(S.tab);
-    if (e.key === "ArrowRight") { e.preventDefault(); setTab(TABS[(i + 1) % 3], true); }
-    if (e.key === "ArrowLeft") { e.preventDefault(); setTab(TABS[(i + 2) % 3], true); }
+    if (e.key === "ArrowRight") { e.preventDefault(); setTab(TABS[(i + 1) % TABS.length], true); }
+    if (e.key === "ArrowLeft") { e.preventDefault(); setTab(TABS[(i + TABS.length - 1) % TABS.length], true); }
   });
   $("list").addEventListener("click", (e) => {
     const row = e.target.closest(".app-row");
@@ -3798,6 +4651,25 @@ function normalizeFlags(c) {
     if (SEL.on) { selToggle(row.dataset.pkg); return; }
     push("app:" + row.dataset.pkg);
   });
+  $("devGroup").addEventListener("click", (e) => {
+    const row = e.target.closest(".app-row");
+    if (!row) return;
+    if (SEL.on) { selToggle(row.dataset.pkg); return; }
+    push("app:" + row.dataset.pkg);
+  });
+  let appLaunchBusy = false;
+  $("launchBtn").onclick = async () => {
+    const pkg = S.current;
+    if (appLaunchBusy || !pkg || isSpecial(pkg)) return;
+    appLaunchBusy = true;
+    haptic("click");
+    try {
+      await saveChain;
+      const r = await run(ctlCmd("launch", q(pkg)), 15000);
+      if (r.errno === 0 && /^ok/m.test(r.stdout || "")) pollStatus();
+      else snack("Couldn't launch " + appOf(pkg).label + ": " + errText(r), null, true);
+    } finally { appLaunchBusy = false; }
+  };
   const FAB_SPRING = (() => {
     const w = 2 * Math.PI / 0.42, z = 0.62, wd = w * Math.sqrt(1 - z * z), N = 40, T = 0.52, f = [];
     for (let i = 0; i <= N; i++) {
@@ -3813,15 +4685,8 @@ function normalizeFlags(c) {
       if (el._a) { const a = el._a; el._a = null; a.cancel(); }
       if (show) el.hidden = false;
     }
-    const ctl = $("ctl");
-    clearTimeout(ctl._t);
-    if (show) {
-      if (document.activeElement === $("q")) $("q").blur();
-      ctl.classList.add("clip", "gone");
-    } else {
-      ctl.classList.remove("gone");
-      ctl._t = setTimeout(() => { if (!ctl.classList.contains("gone")) ctl.classList.remove("clip"); fitCollapse($("scrHome")); }, 470);
-    }
+    if (show && document.activeElement === $("q")) $("q").blur();
+    ctlFold($("ctl"), show);
     if (reduceMotion.matches) { for (const el of els) el.hidden = !show; return; }
     const run = (el, frames, opts) => {
       const a = el.animate(frames, opts);
@@ -3837,16 +4702,18 @@ function normalizeFlags(c) {
     });
   }
   function selUi() {
-    for (const p of [...SEL.set]) if (!S.conf.apps.has(p)) SEL.set.delete(p);
-    const n = SEL.set.size;
+    for (const p of [...SEL.set]) if (!selCan(p)) SEL.set.delete(p);
+    const n = SEL.set.size, apps = n + " " + selNoun([...SEL.set], n);
     $("selCount").textContent = n;
-    $("selFab").setAttribute("aria-label", "Reset " + n + (n === 1 ? " app" : " apps") + " to stock");
+    $("selFab").setAttribute("aria-label", SEL.mode === "rec" ? "Clean " + apps + " from recents" : "Reset " + apps + " to stock");
   }
   function selEnter(pkg) {
     if (SEL.on) return;
+    SEL.mode = S.rec ? "rec" : "boost";
     SEL.on = true;
     SEL.set.clear();
-    SEL.set.add(pkg);
+    if (selCan(pkg)) SEL.set.add(pkg);
+    $("selFab").classList.toggle("clean", SEL.mode === "rec");
     $("list").classList.add("selecting");
     for (const r of rowCache.values()) paintSel(r);
     selUi();
@@ -3865,7 +4732,7 @@ function normalizeFlags(c) {
     if (!fromHistory && history.state && history.state.sel) { SEL.pop = true; history.back(); }
   }
   function selToggle(pkg) {
-    if (!S.conf.apps.has(pkg)) return;
+    if (!selCan(pkg)) return;
     if (SEL.set.has(pkg)) SEL.set.delete(pkg); else SEL.set.add(pkg);
     haptic("tick");
     if (!SEL.set.size) { selExit(); return; }
@@ -3878,76 +4745,125 @@ function normalizeFlags(c) {
     if (SEL.on) { selExit(true); return; }
     if (e.state && e.state.sel) history.back();
   });
-  let lp = null;
+  let lp = null, lastScrollAt = 0, lpGateUntil = 0;
   const lpCancel = (e) => { if (lp && (!e || e.pointerId === lp.id)) { clearTimeout(lp.t); lp = null; } };
-  $("list").addEventListener("pointerdown", (e) => {
-    lpCancel();
-    if (e.button || SEL.on) return;
-    const row = e.target.closest(".app-row");
-    if (!row || !S.conf.apps.has(row.dataset.pkg)) return;
-    lp = { id: e.pointerId, x: e.clientX, y: e.clientY, t: setTimeout(() => {
-      lp = null;
-      if (document.body.classList.contains("modal") || document.body.classList.contains("swiping") || !S.conf.apps.has(row.dataset.pkg)) return;
-      haptic("heavy");
-      swallowNextClick();
-      selEnter(row.dataset.pkg);
-    }, 450) };
+  const homeScr = $("scrHome");
+  for (const host of [$("list"), $("devGroup")]) {
+    host.addEventListener("pointerdown", (e) => {
+      lpCancel();
+      if (e.button || SEL.on) return;
+      if (window.innerHeight - e.clientY < Math.max(ddInset("--inset-bottom"), 24) + 24 || performance.now() < lpGateUntil) return;
+      if (performance.now() - lastScrollAt < 160 || bounceActive || running.length || document.body.classList.contains("swiping")) return;
+      const row = e.target.closest(".app-row");
+      if (!row) return;
+      lp = { id: e.pointerId, x: e.clientX, y: e.clientY, sy: homeScr.scrollTop, t: setTimeout(() => {
+        const moved = lp ? Math.abs(homeScr.scrollTop - lp.sy) : 99;
+        lp = null;
+        if (moved > 2 || performance.now() - lastScrollAt < 160 || bounceActive || running.length) return;
+        if (document.body.classList.contains("modal") || document.body.classList.contains("swiping")) return;
+        haptic("heavy");
+        swallowNextClick();
+        selEnter(row.dataset.pkg);
+      }, 450) };
+    });
+    host.addEventListener("pointermove", (e) => {
+      if (lp && e.pointerId === lp.id && Math.hypot(e.clientX - lp.x, e.clientY - lp.y) > 6) lpCancel();
+    });
+    host.addEventListener("pointerup", lpCancel);
+    host.addEventListener("pointercancel", lpCancel);
+    host.addEventListener("contextmenu", (e) => e.preventDefault());
+  }
+  homeScr.addEventListener("scroll", () => { lastScrollAt = performance.now(); lpCancel(); }, { passive: true });
+  document.addEventListener("visibilitychange", () => { lpCancel(); lpGateUntil = performance.now() + 500; });
+  window.addEventListener("blur", () => lpCancel());
+  window.addEventListener("pagehide", () => lpCancel());
+  window.addEventListener("focus", () => { lpGateUntil = performance.now() + 500; });
+  $("scrHome").addEventListener("click", (e) => {
+    if (!SEL.on || e.target.closest(".app-row, button, a, input, label, .status, .ctl")) return;
+    haptic("click");
+    selExit();
+    if (S.rec) setRec(false);
   });
-  $("list").addEventListener("pointermove", (e) => {
-    if (lp && e.pointerId === lp.id && Math.hypot(e.clientX - lp.x, e.clientY - lp.y) > 10) lpCancel();
-  });
-  $("list").addEventListener("pointerup", lpCancel);
-  $("list").addEventListener("pointercancel", lpCancel);
-  $("list").addEventListener("contextmenu", (e) => e.preventDefault());
-  $("scrHome").addEventListener("scroll", () => lpCancel(), { passive: true });
   $("selX").onclick = () => { haptic("click"); selExit(); };
+  function cleanRecents(drop, msg) {
+    const keep = S.ui.recents;
+    S.ui.recents = drop ? keep.filter((x) => !drop.has(x.p)) : [];
+    saveUi();
+    renderList();
+    snack(msg, () => { S.ui.recents = keep; saveUi(); renderList(); });
+  }
   $("selFab").onclick = async () => {
-    const pkgs = [...SEL.set].filter((p) => S.conf.apps.has(p)), n = pkgs.length;
+    if (SEL.mode === "rec") {
+      const pkgs = [...SEL.set].filter((p) => S.ui.recents.some((x) => x.p === p)), n = pkgs.length;
+      if (!n) { selExit(); return; }
+      haptic("click");
+      const w = selNoun(pkgs, n);
+      const ok = await dialog({
+        title: "Clean " + n + " " + w + " from recents?",
+        body: [n === 1 ? "The selected " + w + " will be removed from your recents. Are you sure?" : "The " + n + " selected " + w + " will be removed from your recents. Are you sure?"],
+        warn: true,
+        buttons: [{ label: "Cancel", value: false, kind: "secondary" }, { label: "Clean", value: true, kind: "danger" }]
+      });
+      if (!ok || !SEL.on) return;
+      selExit();
+      cleanRecents(new Set(pkgs), "Cleaned " + n + " " + w);
+      return;
+    }
+    const pkgs = [...SEL.set].filter((p) => selCan(p)), n = pkgs.length;
     if (!n) { selExit(); return; }
     haptic("click");
+    const w = selNoun(pkgs, n);
     const ok = await dialog({
-      title: n === 1 ? "Reset 1 app to stock?" : "Reset " + n + " apps to stock?",
-      body: [n === 1 ? "The selected app will be switched off and removed from your boosted apps." : "The " + n + " selected apps will be switched off and removed from your boosted apps.",
-        "They'll run on stock performance again until you pick a mode for them."],
+      title: "Reset " + n + " " + w + " to stock?",
+      body: [n === 1 ? "The selected " + w + " will be switched off and removed from your boosted apps. Are you sure?" : "The " + n + " selected " + w + " will be switched off and removed from your boosted apps. Are you sure?"],
       warn: true,
       buttons: [{ label: "Cancel", value: false, kind: "secondary" }, { label: "Reset", value: true, kind: "danger" }]
     });
     if (!ok || !SEL.on) return;
-    const keep = new Map(pkgs.map((p) => [p, Object.assign({}, S.conf.apps.get(p))]));
+    const keep = new Map(pkgs.map((p) => [p, Object.assign({}, entry(S.conf, p))]));
     for (const p of pkgs) addRecent(p);
-    for (const [p, e] of keep) if (e.bt != null) S.ui.btMem[p] = { v: e.bt, on: !!e.btOn, chg: !!e.btChg };
+    for (const [p, e] of keep) if (!isSpecial(p) && e.bt != null) S.ui.btMem[p] = { v: e.bt, on: !!e.btOn, chg: !!e.btChg };
     selExit();
-    changeConf((c) => { for (const p of pkgs) c.apps.delete(p); }, n === 1 ? "Removed 1 app" : "Removed " + n + " apps",
-      () => changeConf((c) => { for (const [p, e] of keep) c.apps.set(p, e); normalizeFlags(c); }));
+    changeConf((c) => { for (const p of pkgs) dropEntry(c, p); }, "Removed " + n + " " + w,
+      () => changeConf((c) => { for (const [p, e] of keep) putEntry(c, p, e); normalizeFlags(c); }));
   };
-  $("sortBtn").onclick = pickSort;
-  $("clearBoosted").onclick = async () => {
-    const n = S.conf.apps.size;
+  $("sortBtn").onclick = () => { iconTap($("sortBtn"), "sort"); pickSort(); };
+  $("recentBtn").onclick = () => {
+    const on = !S.rec;
+    haptic(on ? "click" : "tick");
+    iconTap($("recentBtn"), "clock", !on);
+    requestAnimationFrame(() => setRec(on));
+  };
+  for (const b of [$("recentBtn"), $("sortBtn")]) {
+    let t0 = 0, tm = 0;
+    b.addEventListener("pointerdown", (e) => {
+      if (e.button || root.dataset.skin !== "m3e") return;
+      clearTimeout(tm);
+      t0 = performance.now();
+      b.classList.add("m3-press");
+    });
+    const up = () => {
+      if (!b.classList.contains("m3-press")) return;
+      clearTimeout(tm);
+      tm = setTimeout(() => b.classList.remove("m3-press"), Math.max(0, 90 - (performance.now() - t0)));
+    };
+    for (const ev of ["pointerup", "pointercancel", "pointerleave"]) b.addEventListener(ev, up);
+  }
+  $("clearRecents").onclick = async () => {
+    const n = S.ui.recents.length;
     if (!n) return;
     haptic("click");
     const ok = await dialog({
-      title: "Remove all boosted apps?",
-      body: [n === 1 ? "The boosted app will be switched off and removed from this list." : "All " + n + " boosted apps will be switched off and removed from this list.",
-        "They'll run on stock performance again until you pick a mode for them."],
+      title: "Clear all recents?",
+      body: [n === 1 ? "The recent " + selNoun(S.ui.recents.map((x) => x.p), 1) + " will be removed from this list. Are you sure?" : "All " + n + " recent " + selNoun(S.ui.recents.map((x) => x.p), n) + " will be removed from this list. Are you sure?"],
       warn: true,
       buttons: [{ label: "Cancel", value: false, kind: "secondary" }, { label: "OK", value: true, kind: "danger" }]
     });
     if (!ok) return;
-    const keep = cloneConf(S.conf).apps;
-    for (const pkg of keep.keys()) addRecent(pkg);
-    for (const [pkg, e] of keep) if (e.bt != null) S.ui.btMem[pkg] = { v: e.bt, on: !!e.btOn, chg: !!e.btChg };
-    changeConf((c) => { c.apps.clear(); }, n === 1 ? "Removed 1 boosted app" : "Removed " + n + " boosted apps",
-      () => changeConf((c) => { for (const [p, e] of keep) c.apps.set(p, e); normalizeFlags(c); }));
-  };
-  $("clearRecents").onclick = () => {
-    const keep = S.ui.recents;
-    S.ui.recents = [];
-    saveUi();
-    haptic("click");
-    renderList();
-    snack("Recents cleared", () => { S.ui.recents = keep; saveUi(); renderList(); });
+    cleanRecents(null, "Recents cleared");
   };
   $("status").onclick = async () => {
+    if (SEL.on) return;
     if (!S.ui.moduleOn) {
       haptic("click");
       goTop("settings");
@@ -3966,6 +4882,7 @@ function normalizeFlags(c) {
     } else if (st.active) {
       push("app:" + st.active);
     } else {
+      setRec(false);
       setTab(S.conf.apps.size ? "on" : "all");
       const y = $("tabs").offsetTop - $("homeBar").offsetHeight - 8;
       $("scrHome").scrollTo({ top: Math.max(0, y), behavior: reduceMotion.matches ? "auto" : "smooth" });
@@ -3973,36 +4890,43 @@ function normalizeFlags(c) {
   };
   async function pickPreset(id) {
     const pkg = S.current;
-    const old = S.conf.apps.get(pkg);
+    const old = entry(S.conf, pkg);
     const oldPreset = old ? old.preset : "off";
     if (id === oldPreset) return;
     haptic("click");
-    const w = WARN[id];
-    if (w && !S.ui.noWarn[id]) {
+    const ctx = ctxOf(pkg);
+    const w = ctx === "scr" ? null : (CTX_WARN[ctx] && CTX_WARN[ctx][id]) || WARN[id];
+    const nwKey = ctx === "app" ? id : ctx + "_" + id;
+    if (w && !S.ui.noWarn[nwKey]) {
       const ok = await dialog({
         title: w.title, body: w.body, warn: true, lvl: presetOf(id).lvl, check: "Don't show this again",
         buttons: [{ label: "Cancel", value: false, kind: "secondary" }, { label: w.btn, value: true, kind: w.kind }]
       });
       if (!ok) { renderApp(); return; }
-      if ($("dlgCheckBox").checked) { S.ui.noWarn[id] = true; saveUi(); }
+      if ($("dlgCheckBox").checked) { S.ui.noWarn[nwKey] = true; saveUi(); }
+    }
+    if (pkg === SCR) {
+      changeConf((c) => { c.screenOff = id === "off" ? null : scrEntry(id); }, S.ui.moduleOn ? null : "Changes will apply when the module is active");
+      addRecent(pkg);
+      return;
     }
     changeConf((c) => {
       if (id === "off") {
-        const x = c.apps.get(pkg);
+        const x = entry(c, pkg);
         if (x && x.bt != null) { S.ui.btMem[pkg] = { v: x.bt, on: !!x.btOn, chg: !!x.btChg }; saveUi(); }
-        c.apps.delete(pkg);
+        dropEntry(c, pkg);
         return;
       }
-      let e = c.apps.get(pkg);
+      let e = entry(c, pkg);
       if (!e) {
         const m = S.ui.btMem[pkg];
-        e = { preset: id, t: 1, h: isPerf(id) ? 1 : 0, b: 0, bt: m ? m.v : null, btOn: m ? m.on : false, btChg: m ? m.chg : false };
+        e = { preset: id, t: defTouch(id), h: isPerf(id) ? 1 : 0, b: 0, bt: m ? m.v : null, btOn: m ? m.on : false, btChg: m ? m.chg : false };
         if (m) { delete S.ui.btMem[pkg]; saveUi(); }
       }
-      if (isPerf(id) !== isPerf(e.preset)) { e.h = isPerf(id) ? 1 : 0; if (isPerf(id)) e.t = 1; }
-      if (!touchOk(e.preset) && touchOk(id)) e.t = 1;
+      if (isPerf(id) !== isPerf(e.preset)) { e.h = isPerf(id) ? 1 : 0; e.t = defTouch(id); }
+      else if (!touchOk(e.preset) && touchOk(id)) e.t = defTouch(id);
       e.preset = id;
-      c.apps.set(pkg, e);
+      putEntry(c, pkg, e);
       normalizeFlags(c);
     }, S.ui.moduleOn ? null : "Changes will apply when the module is active");
     addRecent(pkg);
@@ -4012,7 +4936,7 @@ function normalizeFlags(c) {
     if (row) pickPreset(row.dataset.id);
   });
   $("presetList").addEventListener("keydown", (e) => {
-    const rows = [...$("presetList").children];
+    const rows = [...$("presetList").children].filter((r) => !r.hidden);
     const i = rows.indexOf(document.activeElement);
     if (i < 0) return;
     let n = -1;
@@ -4024,7 +4948,7 @@ function normalizeFlags(c) {
   let flagBusy = false;
   async function flipFlag(row, flag) {
     const pkg = S.current;
-    const e = S.conf.apps.get(pkg);
+    const e = entry(S.conf, pkg);
     if (!e || flagBusy || row.disabled) return;
     flagBusy = true;
     const on = !e[flag];
@@ -4032,17 +4956,19 @@ function normalizeFlags(c) {
     $("busyTitle").textContent = feature;
     $("busyBody").textContent = (on ? "Enabling…" : "Disabling…");
     openScrim($("busy"));
+    mhPush(busyBack);
     await paint();
     await new Promise((r) => setTimeout(r, 300));
     closeScrim($("busy"));
+    await mhPop();
     flagBusy = false;
-    changeConf((c) => { const x = c.apps.get(pkg); if (x) x[flag] = on ? 1 : 0; }, S.ui.moduleOn ? null : "Changes will apply when the module is active");
+    changeConf((c) => { const x = entry(c, pkg); if (x) x[flag] = on ? 1 : 0; }, S.ui.moduleOn ? null : "Changes will apply when the module is active");
     addRecent(pkg);
   }
   $("rowTouch").onclick = () => { if (flagBusy) return; haptic("click"); flipFlag($("rowTouch"), "t"); };
   $("rowThermal").onclick = () => { if (flagBusy) return; haptic("click"); flipFlag($("rowThermal"), "h"); };
   $("rowBatoc").onclick = async () => {
-    const e = S.conf.apps.get(S.current);
+    const e = entry(S.conf, S.current);
     if (!e || flagBusy) return;
     haptic("click");
     if (!e.b && !S.ui.noWarn.batoc) {
@@ -4143,6 +5069,41 @@ function normalizeFlags(c) {
     haptic("click");
     renderSettings();
     saveUi();
+  };
+  const WX_URL = "https://github.com/MMRLApp/WebUI-X-Portable/releases/latest";
+  const modId = () => modDir.split("/").filter(Boolean).pop() || "uperf";
+  function wxModule() {
+    if (window.webui && typeof window.webui.createShortcut === "function") return window.webui;
+    const m = window["$" + modId().replace(/[^A-Za-z0-9_]/g, "_")];
+    return m && typeof m.createShortcut === "function" ? m : null;
+  }
+  $("rowShortcut").onclick = async () => {
+    haptic("click");
+    const m = wxModule();
+    if (!m) {
+      dialog({
+        title: "Shortcut not supported",
+        body: [{ parts: ["Home screen shortcuts need ", { text: "WebUI X", url: WX_URL }, ". The app this page is open in can't add one. Open the module in WebUI X and try again."] }],
+        warn: true, buttons: [{ label: "OK", value: true, kind: "primary" }]
+      });
+      return;
+    }
+    await allowAppList();
+    const h = await run(ctlCmd("hasshortcut", q(modId())), 10000);
+    if (/^yes/m.test(h.stdout || "")) { snack("The shortcut is already on your home screen.", null, false, true); return; }
+    try {
+      if (m.createShortcut() === false) throw new Error("Request was rejected.");
+      let made = false;
+      for (let i = 0; i < 30 && !made; i++) {
+        await new Promise((r) => setTimeout(r, 500));
+        const c = await run(ctlCmd("hasshortcut", q(modId())), 10000);
+        made = /^yes/m.test(c.stdout || "");
+      }
+      if (made) snack("Shortcut created successfully", null, false, true);
+      else snack("Failed to create shortcut", null, true);
+    } catch (e) {
+      snack("Failed to create shortcut. " + String((e && e.message) || e), null, true);
+    }
   };
   $("rowSysApps").onclick = () => {
     S.ui.sysApps = !S.ui.sysApps;
@@ -4253,9 +5214,9 @@ function normalizeFlags(c) {
     if (S.conf.batTempOn && S.conf.batTemp !== v) changeConf((c) => { c.batTemp = v; });
   });
   bindTempSlider("abt", (v) => {
-    const pkg = S.current, e = S.conf.apps.get(pkg);
+    const pkg = S.current, e = entry(S.conf, pkg);
     if (!e || !e.btOn || e.bt === v) return;
-    changeConf((c) => { const x = c.apps.get(pkg); if (x) x.bt = v; });
+    changeConf((c) => { const x = entry(c, pkg); if (x) x.bt = v; });
     addRecent(pkg);
   });
   $("rowGbt").onclick = () => {
@@ -4267,14 +5228,14 @@ function normalizeFlags(c) {
     changeConf((c) => { c.batTempOn = on; });
   };
   $("rowAbt").onclick = () => {
-    const pkg = S.current, e = S.conf.apps.get(pkg);
+    const pkg = S.current, e = entry(S.conf, pkg);
     if (!e || flagBusy || $("rowAbt").disabled) return;
     haptic("click");
     const on = !e.btOn;
     collapseAnimEls.add($("abtRow"));
     collapseAnimEls.add($("rowAbtChg"));
     changeConf((c) => {
-      const x = c.apps.get(pkg);
+      const x = entry(c, pkg);
       if (!x) return;
       x.btOn = on;
       if (x.bt == null) x.bt = 0;
@@ -4299,12 +5260,12 @@ function normalizeFlags(c) {
     changeConf((c) => { c.batTempChg = on; });
   };
   $("rowAbtChg").onclick = async () => {
-    const pkg = S.current, e = S.conf.apps.get(pkg);
+    const pkg = S.current, e = entry(S.conf, pkg);
     if (!e || flagBusy || $("rowAbtChg").disabled) return;
     haptic("click");
     const on = !e.btChg;
     if (on && !(await confirmChgWarn())) return;
-    changeConf((c) => { const x = c.apps.get(pkg); if (x) x.btChg = on; });
+    changeConf((c) => { const x = entry(c, pkg); if (x) x.btChg = on; });
     addRecent(pkg);
   };
   $("rowLogs").onclick = async () => {
@@ -4314,12 +5275,13 @@ function normalizeFlags(c) {
     const m = (r.stdout || "").match(/written:\s*(\S+)/);
     if (r.errno === 0 && m) {
       haptic("click");
-      dialog({
+      const open = await dialog({
         title: "Logs saved",
         body: ["Saved to " + m[1].replace("/data/media/0/", "/sdcard/") + ".",
           { parts: ["If you encounter any issue while using the module, send it to me on Telegram: ", { text: "@DonkeyKongG3me", url: "https://t.me/DonkeyKongG3me" }, "."] }],
-        buttons: [{ label: "OK", value: true, kind: "primary" }]
+        buttons: [{ label: "Close", value: false, kind: "secondary" }, { label: "Open", value: true, kind: "primary" }]
       });
+      if (open) openLogsFolder(m[1]);
     } else {
       dialog({
         title: "Couldn't save logs",
@@ -4328,12 +5290,64 @@ function normalizeFlags(c) {
       });
     }
   };
+  const LOGS_DIR = "/sdcard/Android/yc/uperf";
+  function logsHint(label, where) {
+    if (hasKsu && typeof window.ksu.toast === "function") {
+      try { window.ksu.toast("Your logs are saved in storage/emulated/0/Android/yc/uperf"); return; } catch (e) {}
+    }
+    snack(label + " can't open a folder directly. " + where, null, false, true);
+  }
+  async function openLogsFolder(file) {
+    const r = await withBusy("Detecting file managers", "This should only take a few seconds...",
+      () => run(ctlCmd("fmlist"), 30000));
+    const pkgs = (r.stdout || "").split("\n").map((l) => l.trim()).filter((p) => PKG_RE.test(p));
+    if (!pkgs.length) {
+      dialog({
+        title: "No file manager found",
+        body: ["No app that can open folders was found. The logs are in " + LOGS_DIR + "."],
+        warn: true, buttons: [{ label: "OK", value: true, kind: "primary" }]
+      });
+      return;
+    }
+    await fetchLabels(pkgs, appsGen);
+    const hasApi = hasKsu && typeof window.ksu.listPackages === "function";
+    const apps = pkgs.map((p) => ({ pkg: p, label: labelCache.get(p) || p, hasIcon: hasApi }));
+    apps.sort((a, b) => COLL.compare(a.label, b.label));
+    const list = document.createElement("div");
+    list.className = "group sort-list fm-list";
+    for (const app of apps) {
+      const b = document.createElement("button");
+      b.className = "row fm-opt";
+      b.appendChild(iconEl(app, "app-ic"));
+      const t = document.createElement("span");
+      t.className = "row-text";
+      t.innerHTML = '<span class="row-title"></span><span class="row-sum"></span>';
+      t.querySelector(".row-title").textContent = app.label;
+      t.querySelector(".row-sum").textContent = app.pkg;
+      b.appendChild(t);
+      b.onclick = () => { haptic("click"); closeDialog(app); };
+      list.appendChild(b);
+    }
+    const pick = await dialog({
+      title: "Open logs with",
+      body: ["Choose a file manager to open " + LOGS_DIR + " with."],
+      extra: list, sheet: true,
+      buttons: [{ label: "Cancel", value: null, kind: "secondary" }]
+    });
+    if (!pick) return;
+    const o = await run(ctlCmd("fmopen", q(pick.pkg), q(file || "")), 15000);
+    const out = o.stdout || "";
+    if (/^(ok|file)/m.test(out)) return;
+    if (/^root/m.test(out)) { logsHint(pick.label, "Go to Android/yc/uperf in Internal storage to find the logs."); return; }
+    if (/^launched/m.test(out)) { logsHint(pick.label, "Go to " + LOGS_DIR + " to find the logs."); return; }
+    snack("Couldn't open " + pick.label + ". The logs are in " + LOGS_DIR + ".", null, true);
+  }
   $("rowRestart").onclick = async () => {
     haptic("click");
     if (!S.ui.moduleOn) { snack("Activate the module first, otherwise the watcher would start again."); return; }
     const ok = await dialog({
       title: "Restart watcher?",
-      body: ["Restarting the watcher reloads the watcher and app list. Use this feature if the boosting stops working."],
+      body: ["Restarting the watcher reloads the watcher and app list. Use this feature if boosting stops working."],
       icon: "refresh",
       buttons: [{ label: "Cancel", value: false, kind: "secondary" }, { label: "OK", value: true, kind: "primary" }]
     });
@@ -4348,14 +5362,14 @@ function normalizeFlags(c) {
     haptic("click");
     const ok = await dialog({
       title: "Reset module?",
-      body: ["This will revert everything you configured in this app, including your configurations, settings and boosted apps. This cannot be undone.",
+      body: ["This will revert everything you configured in this app, including the presets, settings and boosted apps. This cannot be undone.",
         "Are you sure?"],
       warn: true,
       buttons: [{ label: "Cancel", value: false, kind: "secondary" }, { label: "OK", value: true, kind: "danger" }]
     });
     if (!ok) return;
     const r = await withBusy("Resetting module", "Wiping settings...", async () => {
-      const a = await run(ctlCmd("setconf", "''", 5, 2, 0, 0, 0));
+      const a = await run(ctlCmd("setconf", "''", 5, 2, 0, 0, 0, q("-"), q("-")));
       if (a.errno !== 0 || !/ok/.test(a.stdout)) return a;
       return run(ctlCmd("uireset"));
     });
@@ -4364,7 +5378,7 @@ function normalizeFlags(c) {
       return;
     }
     if (!S.ui.moduleOn) await run(ctlCmd("start"), 30000);
-    try { localStorage.removeItem("uperf_ui_cache"); } catch (e) {}
+    try { localStorage.removeItem("uperf_ui_cache"); if (!hasKsu) localStorage.removeItem("uperf_preview_ui"); } catch (e) {}
     haptic("click");
     location.reload();
   };
@@ -4417,12 +5431,12 @@ function normalizeFlags(c) {
     let listening = false, shaking = false, calmTimer = 0;
     const bubblesInView = () => fxList.length > 0 && !document.hidden && !document.body.classList.contains("modal") && !document.body.classList.contains("swiping");
     function paintFx(list) {
-      const a = String(wx), b = String(wy), c = String(wk);
+      const devOn = root.classList.contains("dev-on");
       for (const fx of list) {
-        const st = fx.style;
-        st.setProperty("--jx", a);
-        st.setProperty("--jy", b);
-        st.setProperty("--shk", c);
+        const st = fx.style, h = devOn && !fx.closest("#devGroup, #scrApp.is-dev, #scrApp.is-scroff") ? .2 : 1;
+        st.setProperty("--jx", String(wx * h));
+        st.setProperty("--jy", String(wy * h));
+        st.setProperty("--shk", String(wk * h));
       }
     }
     function stateFx(list) {
@@ -4467,7 +5481,7 @@ function normalizeFlags(c) {
       if (!raf) raf = requestAnimationFrame(step);
     }
     syncMotion = () => {
-      const want = S.ui.bubbles !== false && !document.hidden && fxList.length > 0;
+      const want = S.ui.bubbles !== false && !document.hidden && !navBusy && kindOf(top()) === "app" && !document.body.classList.contains("swiping");
       if (want === listening) return;
       listening = want;
       if (want) window.addEventListener("devicemotion", onMotion, { passive: true });
@@ -4476,10 +5490,13 @@ function normalizeFlags(c) {
         cancelAnimationFrame(raf);
         raf = 0; last = 0; seen = false;
         gx = gy = px = py = vx = vy = shk = wx = wy = wk = 0;
+        paintFx(fxList);
         setShaking(false);
       }
     };
     document.addEventListener("visibilitychange", syncMotion);
+    window.addEventListener("pageshow", () => { if (listening) { listening = false; syncMotion(); } });
+    window.addEventListener("focus", () => { if (listening) { listening = false; window.removeEventListener("devicemotion", onMotion); syncMotion(); } });
     syncMotion();
     function step(t) {
       raf = 0;
@@ -4501,9 +5518,14 @@ function normalizeFlags(c) {
       else last = 0;
     }
   })();
-  let statusBusy = false, enforceTried = false;
+  let statusBusy = false, statusAgain = false, enforceTried = false;
+  let statusTimers = [];
+  function pollStatus() {
+    for (const t of statusTimers) clearTimeout(t);
+    statusTimers = [500, 1200, 2200, 3500, 5500, 8000].map((ms) => setTimeout(refreshStatus, ms));
+  }
   async function refreshStatus() {
-    if (statusBusy) return;
+    if (statusBusy) { statusAgain = true; return; }
     statusBusy = true;
     try {
       const r = await run(ctlCmd("state"), 10000);
@@ -4520,15 +5542,31 @@ function normalizeFlags(c) {
         enforceTried = true;
         run(ctlCmd("stop"), 30000).then(() => setTimeout(refreshStatus, 600));
       }
-    } finally { statusBusy = false; }
-  }
-  function addHostCss() {
-    for (const href of ["/internal/insets.css", "/internal/colors.css", "/mmrl/insets.css", "/mmrl/colors.css"]) {
-      const l = document.createElement("link");
-      l.rel = "stylesheet";
-      l.href = href;
-      document.head.insertBefore(l, document.head.firstChild);
+    } finally {
+      statusBusy = false;
+      if (statusAgain) { statusAgain = false; refreshStatus(); }
     }
+  }
+  function resumeStatus() {
+    if (document.hidden) return;
+    refreshStatus();
+    pollStatus();
+  }
+  document.addEventListener("visibilitychange", resumeStatus);
+  window.addEventListener("focus", resumeStatus);
+  window.addEventListener("pageshow", resumeStatus);
+  function addHostCss() {
+    const load = (dir, next) => {
+      let bad = false;
+      for (const f of ["insets.css", "colors.css"]) {
+        const l = document.createElement("link");
+        l.rel = "stylesheet";
+        l.href = "/" + dir + "/" + f;
+        if (next) l.onerror = () => { l.remove(); if (!bad) { bad = true; next(); } };
+        document.head.insertBefore(l, document.head.firstChild);
+      }
+    };
+    load("internal", () => load("mmrl"));
   }
   async function init() {
     for (const k in SCREENS) { const el = SCREENS[k]; el.hidden = false; setOff(el, k !== "home"); }
@@ -4540,14 +5578,22 @@ function normalizeFlags(c) {
       }
     }
     ctl = modDir + "/script/ctl.sh";
+    if (!wxModule()) { const sc = $("rowShortcut"); if (sc) sc.remove(); }
     history.replaceState({ v: ["home"] }, "", location.pathname + location.search);
     buildPresetList();
-    G.tabs = springGlider($("tabs"), () => document.querySelector('.tab[aria-selected="true"]'), (b) => setTab(b.dataset.tab), { contain: true, pauseFx: true });
+    const curTab = () => document.querySelector('.tab[aria-selected="true"]'), pickTab = (b) => setTab(b.dataset.tab);
+    G.tabs = skinGlider({
+      m3: springGlider($("tabs"), curTab, pickTab, { contain: true, pauseFx: true, skin: "m3e" }),
+      mx: glider($("tabs"), curTab, pickTab, { pill: true, skin: "miuix", pauseFx: true, spring: true, gain: 0.5, fit: true })
+    });
     $("pillnav").addEventListener("pointerdown", settleSwipe, true);
     G.nav = glider($("pillnav"), () => $("pillnav").querySelector('[aria-current="page"]'), (b) => goTop(b.dataset.val));
     window.addEventListener("resize", () => { syncGliders(false); fitAll(); flipEmpty(fitEmpty); });
     const params = new URLSearchParams(location.search);
-    await Promise.all([loadConf(), loadUi(), refreshStatus(), loadCaps()]);
+    confReady = loadConf();
+    uiReady = loadUi();
+    const appsJob = loadApps();
+    await Promise.all([confReady, uiReady, refreshStatus(), loadCaps()]);
     renderChipNote();
     if (!S.ui.skin) S.ui.skin = /xiaomi|redmi|poco/i.test(S.status.brand || "") ? "miuix" : "m3e";
     if (S.ui.dyn === null) S.ui.dyn = S.ui.skin === "m3e";
@@ -4562,13 +5608,18 @@ function normalizeFlags(c) {
     syncGliders(false);
     const probe = cloneConf(S.conf);
     normalizeFlags(probe);
-    if ([...probe.apps].some(([p, e]) => { const o = S.conf.apps.get(p); return o.t !== e.t || o.h !== e.h || o.b !== e.b; })) changeConf(normalizeFlags);
-    allowAppList();
-    await loadApps();
+    const flagDiff = (o, e) => o.t !== e.t || o.h !== e.h || o.b !== e.b;
+    if ([...probe.apps].some(([p, e]) => flagDiff(S.conf.apps.get(p), e)) || (probe.device && flagDiff(S.conf.device, probe.device))) changeConf(normalizeFlags);
+    await appsJob;
     if (S.ui.sort === "new" || S.ui.sort === "old") await loadDates();
     S.loaded = true;
+    (window.requestIdleCallback || setTimeout)(() => allowAppList());
+    warmLaunchCache();
+    (window.requestIdleCallback || setTimeout)(() => Veil.warm());
     appsBanner();
     renderList();
+    syncMotion();
+    setTimeout(() => { fxInvalidate(); syncMotion(); }, 1200);
     renderStatus();
     renderFacts();
     fitAll();

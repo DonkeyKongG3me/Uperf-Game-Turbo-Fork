@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="light dark" id="metaScheme">
 <title>Uperf Game Turbo</title>
+<link rel="icon" href="assets/shortcut.png">
 <link rel="stylesheet" href="skin-miuix.css">
 <link rel="stylesheet" href="skin-m3e.css">
 <script>
@@ -84,11 +85,34 @@
   .search-row { display: flex; align-items: center; gap: 8px; }
   .search-row .search { flex: 1; min-width: 0; }
   .sort-btn { flex: none; display: grid; place-items: center; }
-  .clear-btn { overflow: hidden; width: 0 !important; margin-left: -8px; opacity: 0; scale: .6; pointer-events: none; }
-  .clear-btn .i { grid-area: 1 / 1; }
-  .search-row.with-clear .clear-btn { width: var(--cb-w) !important; margin-left: 0; opacity: 1; scale: 1; pointer-events: auto; }
-  html:not([data-skin="miuix"]) .clear-btn .trash-mx, html[data-skin="miuix"] .clear-btn .trash-m3 { display: none; }
-  @media (prefers-reduced-motion: reduce) { .clear-btn { transition: none !important; } }
+  html:not([data-skin="miuix"]) .ic-mx, html[data-skin="miuix"] .ic-m3 { display: none; }
+  .sort-btn svg.i { overflow: visible; }
+  .ic-clock .ck-hr, .ic-clock .ck-min, .ic-clock .ck-face { transform-box: view-box; transform-origin: 12px 12px; }
+  .ic-clock .ck-pin { fill: currentColor; stroke-width: 1.4; }
+  .ic-sorter .so-l { transform-box: view-box; transform-origin: 4px 12px; }
+  .ic-sorter .so-ar { transform-box: view-box; transform-origin: 18px 12px; }
+  .apps-head { display: flex; align-items: flex-end; min-width: 0; }
+  .apps-head > .small-title { flex: 1; min-width: 0; }
+  .apps-head[hidden] { display: none !important; }
+  html[data-skin] #listPanel.in-rec #appsLbl { padding-top: 16px; }
+  .head-acts { flex: none; display: grid; justify-items: end; align-items: center; }
+  .head-acts > .head-act { grid-area: 1 / 1; }
+  .head-act { position: relative; display: inline-flex; align-items: center; background: none; border: 0; margin: 0; cursor: pointer; color: var(--act-c, currentColor); font: inherit; line-height: 1.2; white-space: nowrap; -webkit-tap-highlight-color: transparent; }
+  .head-act .act-txt { display: inline-block; transform-origin: 50% 60%; }
+  .head-act:not(.on) { visibility: hidden; pointer-events: none; transition: visibility 0s linear .189s; }
+  .head-act.cut, .head-act.cut .act-txt { transition: none !important; }
+  .act-ghost { position: fixed; z-index: 14; margin: 0; padding: 0; display: block; white-space: nowrap; pointer-events: none; transform-origin: 50% 60%; text-decoration-skip-ink: auto; }
+  html[data-skin="miuix"] .head-act .act-txt { opacity: 0; filter: blur(8px); transform: scale(.55); transition: opacity .1s linear, filter .126s ease-in, transform .139s ease-in; }
+  html[data-skin="miuix"] .head-act.on .act-txt {
+    opacity: 1; filter: blur(0); transform: none;
+    transition: opacity .214s ease-out .025s, filter .328s cubic-bezier(.2, .7, .2, 1) .025s, transform .39s var(--mx-spring-scale, var(--sp-bounce)) .025s;
+  }
+  html[data-skin="m3e"] .head-act .act-txt { opacity: 0; transform: translateX(8px); transition: opacity .095s linear, transform .126s var(--md-ease-std, ease); }
+  html[data-skin="m3e"] .head-act.on .act-txt { opacity: 1; transform: none; transition: opacity .158s linear .032s, transform calc(var(--md-spring-default-t, .41s) * .63) var(--md-spring-default, var(--sp-soft)) .032s; }
+  html[data-skin] .head-act.on:active .act-txt { opacity: .6; transition: opacity .1s linear; }
+  @media (prefers-reduced-motion: reduce) {
+    html[data-skin] .head-act .act-txt { transition-duration: 0s !important; transition-delay: 0s !important; filter: none !important; transform: none !important; }
+  }
   body.modal .screen { overflow: hidden !important; }
   .scrim { touch-action: none; overscroll-behavior: contain; }
   .screen { touch-action: pan-y; }
@@ -108,7 +132,7 @@
   @keyframes hint-sway { 0%, 100% { transform: translateX(-3px); } 50% { transform: translateX(5px); } }
   .snackbar { touch-action: none; }
   .screen.swipe-layer { will-change: transform; }
-  .screen.swiping .status, .screen.swiping .banner, .screen.swiping .mod-pill { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+  html[data-skin="miuix"] :is(.status, .banner, .mod-pill, .search, .sort-btn, .swatch.empty-sw):not(.stretching), html[data-skin="miuix"] .tabs:not(.pressing):not(.dragging) { -webkit-backdrop-filter: none; backdrop-filter: none; }
   .status-icon { position: relative; overflow: visible; }
   .status[data-mode="idle"] .status-icon .i { animation: rocket-hover 3s ease-in-out infinite; }
   .status[data-mode="active"] .status-icon .i { animation: rocket-hover 1.4s ease-in-out infinite; }
@@ -123,7 +147,6 @@
   .screen.swipe-layer > .topbar { translate: 0 var(--st, 0px); }
   .screen.tab-transit .topbar-title, .screen.tab-transit .page-head .large-title {
     filter: blur(calc(var(--tfx, 0) * 9px)) opacity(calc(1 - var(--tfx, 0)));
-    will-change: filter;
   }
   .screen.tab-transit .topbar-title { translate: var(--tdx, 0px) 0; }
   html[data-skin="miuix"] .screen.tab-transit .topbar-title {
@@ -160,7 +183,8 @@
   .screen.fx-hold .opt-fx::before, .screen.fx-hold .opt-fx::after, .screen.fx-hold .rp, .screen.fx-hold .radio::before,
   body.fx-hold .screen:not(.sub) .opt-fx::before, body.fx-hold .screen:not(.sub) .opt-fx::after,
   body.fx-hold .screen:not(.sub) .rp, body.fx-hold .screen:not(.sub) .radio::before,
-  body.fx-drag .opt-fx::before, body.fx-drag .opt-fx::after, body.fx-drag .rp, body.fx-drag .radio::before {
+  body.fx-drag .opt-fx::before, body.fx-drag .opt-fx::after, body.fx-drag .rp, body.fx-drag .radio::before,
+  body.fx-bounce .opt-fx::before, body.fx-bounce .opt-fx::after, body.fx-bounce .rp, body.fx-bounce .radio::before {
     animation-play-state: paused !important;
   }
   html[data-skin="miuix"] .scrim.show { background: rgba(0, 0, 0, .2); }
@@ -194,7 +218,7 @@
     transform: none; will-change: transform;
     transition: transform .336s linear(0, 0.0213, 0.0754, 0.1497, 0.235, 0.3245, 0.4131, 0.4978, 0.5762, 0.6471, 0.7102, 0.7652, 0.8125, 0.8525, 0.886, 0.9137, 0.9362, 0.9542, 0.9684, 0.9795, 0.988, 0.9943, 0.9988, 1.002, 1.0041, 1.0054, 1.0061, 1.0063, 1.0062, 1.0059, 1.0054, 1.0049, 1.0043, 1.0038, 1.0032, 1.0027, 1.0023, 1.0019, 1.0015, 1.0012, 1), --dd-glow-alpha .45s ease-out, box-shadow .45s ease-out, border-color .45s ease-out;
   }
-  html[data-skin="miuix"] .back-btn::before {
+  html[data-skin="miuix"] .back-btn::before, html[data-skin="miuix"] .back-btn::after {
     inset: auto; left: 50%; top: 50%; border-radius: 50%;
     width: calc(100% + var(--bx, 0px)); height: calc(100% - var(--by, 0px));
     translate: calc(-50% + var(--bsx, 0px)) calc(-50% + var(--bsy, 0px)); rotate: var(--ba, 0deg);
@@ -217,30 +241,30 @@
   .ctl.gone { grid-template-rows: 0fr; }
   .ctl.gone .ctl-in > * { opacity: 0; scale: .86; pointer-events: none; }
   html[data-skin="miuix"] .ctl.gone .ctl-in > * { filter: blur(13px); }
-  @media (prefers-reduced-motion: reduce) { .ctl, .ctl-in > * { transition: none; } }
-  html[data-skin="miuix"] .clear-btn { filter: blur(10.4px); }
-  html[data-skin="miuix"] .search-row.with-clear .clear-btn { filter: none; }
+  .ctl-in > .ctl { transition: grid-template-rows .4125s var(--sp-soft), opacity .165s linear, scale .39s var(--sp-bounce), filter .24s ease-out; }
+  @media (prefers-reduced-motion: reduce) { .ctl, .ctl-in > *, .ctl-in > .ctl { transition: none; } }
   .search-row .search { position: relative; z-index: 1; }
-  .search-row:not(.with-clear) > .clear-btn { border-width: 0; }
-  html .search-row > .sort-btn { transition: width .42s var(--sp-bounce), margin-left .5s var(--sp-soft), scale .46s var(--sp-bounce), opacity .24s linear, filter .32s ease-out, border-radius .2s ease, background-color .25s ease, color .25s ease; }
-  html .search-row.q-anim > .sort-btn { transition: width .42s var(--sp-bounce), margin-left .375s var(--sp-soft), scale .345s var(--sp-bounce), opacity .18s linear, filter .24s ease-out, border-radius .2s ease, background-color .25s ease, color .25s ease; }
-  .search-row.q-open > .sort-btn:not(.clear-btn), .search-row.q-open.with-clear > .clear-btn { margin-left: calc(-1 * var(--bw) - 8px); opacity: 0; scale: .55; pointer-events: none; }
-  html[data-skin="miuix"] .search-row.q-open > .sort-btn:not(.clear-btn), html[data-skin="miuix"] .search-row.q-open.with-clear > .clear-btn { filter: blur(10.4px); }
+  html .search-row > .sort-btn { transition: width .42s var(--sp-bounce), margin-left .5s var(--sp-soft), scale .46s var(--sp-bounce), opacity .24s linear, filter .32s ease-out, border-radius var(--rb-t, .2s) var(--rb-e, ease), background-color .25s ease, color .25s ease; }
+  html .search-row.q-anim > .sort-btn { transition: width .42s var(--sp-bounce), margin-left .375s var(--sp-soft), scale .345s var(--sp-bounce), opacity .18s linear, filter .24s ease-out, border-radius var(--rb-t, .2s) var(--rb-e, ease), background-color .25s ease, color .25s ease; }
+  .search-row.q-open > .sort-btn { margin-left: calc(-1 * var(--bw) - 8px); opacity: 0; scale: .55; pointer-events: none; }
+  html[data-skin="miuix"] .search-row.q-open > .sort-btn { filter: blur(10.4px); }
   body.kb-open .pillnav { transform: translate(-50%, 180%); opacity: 0; pointer-events: none; }
   body.kb-open .sel-fab, body.kb-open .sel-x { opacity: 0; pointer-events: none; }
   .status-sum, .status-title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .sel-fab, .sel-x { position: fixed; z-index: 21; display: grid; place-items: center; }
   .sel-fab .i { grid-area: 1 / 1; }
   html:not([data-skin="miuix"]) .sel-fab .trash-mx, html[data-skin="miuix"] .sel-fab .trash-m3 { display: none; }
-  .sel-count { position: absolute; top: -3px; right: -3px; min-width: 22px; height: 22px; padding: 0 6px; border-radius: 11px; font-size: 12px; font-weight: 600; line-height: 22px; text-align: center; }
+  html:not([data-skin="miuix"]) .sel-fab .broom-mx, html[data-skin="miuix"] .sel-fab .broom-m3 { display: none; }
+  .sel-fab:not(.clean) :is(.broom-m3, .broom-mx), .sel-fab.clean :is(.trash-m3, .trash-mx) { display: none !important; }
+  .sel-count { position: absolute; z-index: 3; top: -3px; right: -3px; min-width: 22px; height: 22px; padding: 0 6px; border-radius: 11px; font-size: 12px; font-weight: 600; line-height: 22px; text-align: center; }
   .sel-box { flex: none; display: grid; place-items: center; animation: sel-in .42s var(--sp-bounce) both; }
   .sel-box.out { animation: sel-out .34s cubic-bezier(.4, 0, .6, 1) both; }
   html[data-skin="miuix"] .sel-box { animation-name: sel-in-mx; }
   html[data-skin="miuix"] .sel-box.out { animation-name: sel-out-mx; }
   .sel-box .i { opacity: 0; transform: scale(.4); transition: opacity .22s, transform .4s var(--sp-bounce); }
-  #list .app-row > .sel-box { position: absolute; top: 50%; translate: 0 -50%; z-index: 2; }
-  html[data-skin="miuix"] #list .app-row > .sel-box { right: 10px; }
-  html[data-skin="m3e"] #list .app-row > .sel-box { right: 17px; margin: 0; }
+  :is(#list, #devGroup) .app-row > .sel-box { position: absolute; top: 50%; translate: 0 -50%; z-index: 2; }
+  html[data-skin="miuix"] :is(#list, #devGroup) .app-row > .sel-box { right: 10px; }
+  html[data-skin="m3e"] :is(#list, #devGroup) .app-row > .sel-box { right: 17px; margin: 0; }
   .app-row .chev { transition: opacity .3s ease, scale .42s var(--sp-bounce), filter .3s ease; }
   .app-row .row-end { transition: translate .26s cubic-bezier(.2, .9, .3, 1); }
   .app-row:has(> .sel-box:not(.out)) .row-end { translate: -6px 0; }
@@ -251,12 +275,31 @@
   .app-row.sel-na { opacity: .42; }
   @keyframes sel-in { from { opacity: 0; transform: scale(.4); } }
   @keyframes sel-out { to { opacity: 0; transform: scale(.4); } }
-  @keyframes sel-in-mx { from { opacity: 0; transform: scale(.4); filter: blur(6px); } }
-  @keyframes sel-out-mx { to { opacity: 0; transform: scale(.4); filter: blur(6px); } }
+  @keyframes sel-in-mx { from { opacity: 0; transform: scale(.4); filter: blur(4px); } }
+  @keyframes sel-out-mx { to { opacity: 0; transform: scale(.4); filter: blur(4px); } }
   @media (prefers-reduced-motion: reduce) { .sel-box, .sel-box .i { animation: none; transition: none; } }
   .one-line { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   html[data-skin] .small-title + .group.facts { margin-top: 0 !important; }
   html[data-skin] .small-title + .group.list { margin-top: 0 !important; }
+  .dev-ic .dev-mx { width: 90%; height: 90%; }
+  .dev-ic .dev-m3, html[data-skin="m3e"] .dev-ic .dev-mx { display: none; }
+  html[data-skin="m3e"] .dev-ic .dev-m3 { display: block; width: 24px; height: 24px; }
+  html[data-skin="m3e"] .app-icon.dev-ic .dev-m3 { width: 40px; height: 40px; stroke-width: 1.6; }
+  html[data-skin="miuix"] .dev-ic { background: #8F9BB1 !important; color: #FFFFFF; }
+  html[data-skin="m3e"] .dev-ic { background: var(--md-primary-container) !important; color: var(--md-on-primary-container); }
+  #devLbl[hidden], #devGroup[hidden], #appsLbl[hidden], #appsHead[hidden] { display: none !important; }
+  html[data-skin="miuix"] .dev-ic.scr-ic { background: #5B6478 !important; }
+  #scrApp.is-scroff :is(#extraLbl, #extraGroup, #abtGroupLbl, #abtGroup) { display: none !important; }
+  html[data-skin] #devLbl, html[data-skin] #appsLbl { padding-top: 8px; }
+  html[data-skin] .small-title + .group.dev-group, html[data-skin] #appsHead ~ #list { margin-top: 0 !important; }
+  .launch-row { display: flex; align-items: center; justify-content: center; width: 100%; box-sizing: border-box; padding: 12px 24px 0; }
+  .launch-row[hidden] { display: none; }
+  .launch-btn { flex: none; width: auto !important; height: auto !important; min-height: 48px !important; margin: 0 auto; padding: 0 24px 0 20px !important; gap: 8px !important; border-radius: 999px !important; corner-shape: round !important; line-height: 1; white-space: nowrap; zoom: .875; transform: translateY(-5%); }
+  .launch-btn .i { width: 24.2px; height: 24.2px; flex: none; }
+  .launch-btn .launch-lbl { display: block; line-height: 1; font-size: 1.05em; }
+  html[data-skin="miuix"] .launch-row { padding: 14px 16px 0; }
+  html[data-skin="miuix"] .launch-btn { min-height: 48px !important; padding: 0 24px 0 20px !important; font-size: var(--mx-body1); transform: translateY(-10%); }
+  html[data-skin="miuix"] #scrApp.has-launch .app-head { padding-top: calc(var(--inset-top) + 40px); }
   .mod-pill {
     display: flex; align-items: center; gap: 10px; margin: 8px 16px 0; padding: 12px 16px; border-radius: 18px;
     font-size: 13px; line-height: 1.35; background: color-mix(in srgb, currentColor 10%, transparent);
@@ -268,8 +311,8 @@
   .mod-pill .chev { margin-left: auto; opacity: .7; }
   html[data-skin="miuix"] .mod-pill {
     margin: 8px 12px 0; border-radius: 26px; font-size: var(--mx-body2); color: var(--mx-summary);
-    background: var(--mx-glass-alert-fill); border: 1px solid var(--mx-glass-edge-soft);
-    -webkit-backdrop-filter: blur(26px) saturate(1.65); backdrop-filter: blur(26px) saturate(1.65);
+    position: relative; background: var(--mx-glass-alert-fill); border: 1px solid transparent;
+    -webkit-backdrop-filter: blur(4px) saturate(1.65); backdrop-filter: blur(4px) saturate(1.65);
     box-shadow: var(--mx-glass-shadow); width: calc(100% - 24px);
   }
   html[data-skin="miuix"] .mod-pill .chev { color: var(--mx-actions); opacity: 1; width: 20px; height: 20px; }
@@ -286,6 +329,13 @@
   html[data-skin="miuix"][data-dark]:not([data-tinted]) #moduleGroup::after { background: rgba(255, 255, 255, .16); }
   #moduleGroup.pulse::after { animation: mod-pulse .25s ease-in-out 2; }
   @keyframes mod-pulse { 0%, 100% { opacity: 0; } 50% { opacity: 1; } }
+  html.dev-on .app-ic:not(.dev-ic), html.dev-on .app-icon:not(.dev-ic) { filter: grayscale(1); }
+  html.dev-on #list .opt-fx, html.dev-on #scrApp:not(.is-dev):not(.is-scroff) .opt-fx { filter: grayscale(1); }
+  html.dev-on #list [data-lvl].fx-live, html.dev-on #scrApp:not(.is-dev):not(.is-scroff) [data-lvl].fx-live { --sweep: 8s; --rip: 16.3s; }
+  html.dev-on #list [data-lvl="bal"].fx-live, html.dev-on #scrApp:not(.is-dev):not(.is-scroff) [data-lvl="bal"].fx-live { --sweep: 6.7s; --rip: 9.3s; }
+  html.dev-on #list [data-lvl="rapid"].fx-live, html.dev-on #scrApp:not(.is-dev):not(.is-scroff) [data-lvl="rapid"].fx-live { --sweep: 5.3s; --rip: 5.3s; }
+  html.dev-on #list [data-lvl="ext"].fx-live, html.dev-on #scrApp:not(.is-dev):not(.is-scroff) [data-lvl="ext"].fx-live { --sweep: 4.3s; --rip: 3.2s; }
+  html.dev-on #scrApp:not(.is-dev):not(.is-scroff) :is(#rowTouch, #rowThermal, #rowBatoc, #rowAbt, #rowAbtChg, #abtRow) { filter: grayscale(1); opacity: .45; pointer-events: none; }
   html.mod-off .opt-fx::before, html.mod-off .opt-fx::after, html.mod-off .rp, html.mod-off .radio::before { animation-play-state: paused !important; }
   .status-icon .ban { display: none; position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); stroke-width: 1.7; pointer-events: none; }
   .status-icon .ban .ko { stroke: var(--ban-bg, transparent); stroke-width: 2.8; }
@@ -303,6 +353,8 @@
   .hl[data-lvl], .opt[data-lvl] .pn { color: var(--lvl); font-weight: 600; }
   .opt, .app-row { position: relative; overflow: hidden; isolation: isolate; }
   .app-row { contain: layout style paint; }
+  #accentRow { transition: opacity .25s; }
+  #accentRow.dyn-lock { opacity: .38; pointer-events: none; }
   .opt-fx { position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity .4s; z-index: 0; contain: layout paint; }
   .opt > :not(.opt-fx), .app-row > :not(.opt-fx) { position: relative; z-index: 1; }
   .opt-fx::before, .opt-fx::after { content: ""; position: absolute; inset: 0; }
@@ -313,8 +365,7 @@
   [data-lvl="rapid"].fx-live { --sweep: 2s; --rip: 2s; --tint: 14%; }
   [data-lvl="ext"].fx-live { --sweep: 1.6s; --rip: 1.2s; --tint: 16%; }
   .fx-live .opt-fx::before {
-    right: auto; width: 300%;
-    background: linear-gradient(105deg, transparent 35%, color-mix(in srgb, var(--lvl) 46%, transparent) 50%, transparent 65%);
+    background: linear-gradient(105deg, transparent 6.5%, color-mix(in srgb, var(--lvl) 46%, transparent) 50%, transparent 93.5%);
     opacity: calc(.52 + var(--shk, 0) * .48); transition: opacity .2s linear;
     animation: fx-sweep var(--sweep) linear infinite; will-change: transform;
   }
@@ -340,35 +391,25 @@
   .rx { position: absolute; inset: 0; opacity: 0; visibility: hidden; transition: opacity .6s ease, visibility 0s linear .6s; }
   .shk .rx { opacity: 1; visibility: visible; transition: opacity .25s ease, visibility 0s; }
   .calm .rx .rp { animation-play-state: paused; }
+  .calm .rx { display: none; }
+  @starting-style { .shk .rx { opacity: 0; } }
   .rp:nth-child(3n+1) { --d: 16px; --k: 1; }
   .rp:nth-child(3n+2) { --d: 10px; --k: 1.6; }
   .rp:nth-child(3n) { --d: 22px; --k: .7; }
   .fx-live .rp { animation: fx-ripple var(--rip) cubic-bezier(.3, .25, .65, .9) infinite; }
   .fx-live .rp:nth-child(1) { top: 50%; animation-delay: 0s; }
-  .fx-live .rp:nth-child(2) { top: 28%; animation-delay: calc(var(--rip) / -9); }
-  .fx-live .rp:nth-child(3) { top: 74%; animation-delay: calc(var(--rip) / -4.5); }
-  .fx-live .rp:nth-child(4) { top: 40%; animation-delay: calc(var(--rip) / -3); }
-  .fx-live .rp:nth-child(5) { top: 18%; animation-delay: calc(var(--rip) / -2.25); }
-  .fx-live .rp:nth-child(6) { top: 62%; animation-delay: calc(var(--rip) / -1.8); }
-  .fx-live .rp:nth-child(7) { top: 84%; animation-delay: calc(var(--rip) / -1.5); }
-  .fx-live .rp:nth-child(8) { top: 34%; animation-delay: calc(var(--rip) / -1.286); }
-  .fx-live .rp:nth-child(9) { top: 68%; animation-delay: calc(var(--rip) / -1.125); }
-  .fx-live .rx .rp:nth-child(1) { top: 12%; animation-delay: calc(var(--rip) * -.0417); }
-  .fx-live .rx .rp:nth-child(2) { top: 46%; animation-delay: calc(var(--rip) * -.125); }
-  .fx-live .rx .rp:nth-child(3) { top: 22%; animation-delay: calc(var(--rip) * -.2083); }
-  .fx-live .rx .rp:nth-child(4) { top: 70%; animation-delay: calc(var(--rip) * -.2917); }
-  .fx-live .rx .rp:nth-child(5) { top: 90%; animation-delay: calc(var(--rip) * -.375); }
-  .fx-live .rx .rp:nth-child(6) { top: 44%; animation-delay: calc(var(--rip) * -.4583); }
-  .fx-live .rx .rp:nth-child(7) { top: 30%; animation-delay: calc(var(--rip) * -.5417); }
-  .fx-live .rx .rp:nth-child(8) { top: 60%; animation-delay: calc(var(--rip) * -.625); }
-  .fx-live .rx .rp:nth-child(9) { top: 82%; animation-delay: calc(var(--rip) * -.7083); }
-  .fx-live .rx .rp:nth-child(10) { top: 54%; animation-delay: calc(var(--rip) * -.7917); }
-  .fx-live .rx .rp:nth-child(11) { top: 14%; animation-delay: calc(var(--rip) * -.875); }
-  .fx-live .rx .rp:nth-child(12) { top: 36%; animation-delay: calc(var(--rip) * -.9583); }
+  .fx-live .rp:nth-child(2) { top: 28%; animation-delay: calc(var(--rip) / -6); }
+  .fx-live .rp:nth-child(3) { top: 74%; animation-delay: calc(var(--rip) / -3); }
+  .fx-live .rp:nth-child(4) { top: 40%; animation-delay: calc(var(--rip) / -2); }
+  .fx-live .rp:nth-child(5) { top: 18%; animation-delay: calc(var(--rip) / -1.5); }
+  .fx-live .rp:nth-child(6) { top: 62%; animation-delay: calc(var(--rip) / -1.2); }
+  .fx-live .rx .rp:nth-child(1) { top: 86%; animation-delay: calc(var(--rip) / -12); }
   .radio { position: relative; }
   .radio::before { content: ""; position: absolute; inset: 0; border-radius: 50%; pointer-events: none; border: 2px solid var(--lvl, currentColor); opacity: 0; }
   .opt.fx-live .radio::before { animation: fx-pulse calc(var(--rip) * .6) ease-out infinite; }
-  @keyframes fx-sweep { from { transform: translateX(-66.667%); } to { transform: translateX(0); } }
+  .opt-fx.fz::before { animation: none !important; will-change: auto; transform: var(--fzb, none); }
+  .opt-fx.fz::after { animation: none !important; transform: var(--fza, none); opacity: var(--fzo, 1); }
+  @keyframes fx-sweep { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
   @keyframes fx-ember { from { opacity: .45; transform: scaleY(.9); } to { opacity: 1; transform: scaleY(1.1); } }
   @keyframes fx-ripple {
     0% { transform: translateX(0) scale(.4); opacity: 0; }
@@ -485,7 +526,7 @@
   <div class="pr-pad" aria-hidden="true"></div>
   <div id="banner" role="status"></div>
   <header class="page-head">
-    <h1 class="large-title" id="homeTitle">Uperf Game Turbo <span class="title-ver">1.21</span></h1>
+    <h1 class="large-title" id="homeTitle">Uperf Game Turbo <span class="title-ver">1.3</span></h1>
   </header>
   <button class="status" id="status" hidden aria-live="polite" aria-describedby="statusSum">
     <span class="status-icon" aria-hidden="true">
@@ -515,27 +556,39 @@
         <svg class="i" viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-close"/></svg>
       </button>
     </label>
-    <button class="sort-btn" id="sortBtn" aria-label="Sort apps" aria-haspopup="dialog">
-      <svg class="i" viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-sort"/></svg>
+    <button class="sort-btn rec-btn" id="recentBtn" aria-label="Recently changed apps" aria-pressed="false">
+      <svg class="i ic-clock" viewBox="0 0 24 24" aria-hidden="true">
+        <circle class="ck-face" cx="12" cy="12" r="8.75"/>
+        <path class="ck-hr" d="M12 12V8.4"/>
+        <path class="ck-min" d="M12 12l3.1 2.1"/>
+        <circle class="ck-pin" cx="12" cy="12" r=".35"/>
+      </svg>
     </button>
-    <button class="sort-btn clear-btn" id="clearBoosted" aria-label="Remove all boosted apps" aria-haspopup="dialog" tabindex="-1" aria-hidden="true">
-      <svg class="i trash-m3" viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-trash-m3"/></svg>
-      <svg class="i trash-mx" viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-trash-mx"/></svg>
-      </button>
+    <button class="sort-btn" id="sortBtn" aria-label="Sort apps" aria-haspopup="dialog">
+      <svg class="i ic-sorter" viewBox="0 0 24 24" aria-hidden="true">
+        <path class="so-l so-l1" d="M4 7h11"/>
+        <path class="so-l so-l2" d="M4 12h8"/>
+        <path class="so-l so-l3" d="M4 17h5"/>
+        <path class="so-ar" d="M18 5v14M15 16l3 3 3-3"/>
+      </svg>
+    </button>
     </div>
+    <div class="ctl" id="tabsCtl"><div class="ctl-in">
     <div class="tabs glider" role="tablist" aria-label="Which apps to show" id="tabs">
       <span class="ind" aria-hidden="true"></span>
       <button class="tab" role="tab" id="tabAll" data-tab="all" aria-selected="true" aria-controls="listPanel">All apps</button>
       <button class="tab" role="tab" id="tabOn" data-tab="on" aria-selected="false" aria-controls="listPanel">Boosted<span class="count" id="countOn"></span></button>
-      <button class="tab" role="tab" id="tabRecent" data-tab="recent" aria-selected="false" aria-controls="listPanel">Recents</button>
     </div>
+    </div></div>
   </div></div>
   <section id="listPanel" role="tabpanel" aria-labelledby="tabAll">
-    <div class="list-head" id="recentHead" hidden>
-      <p class="list-note">Apps you changed recently will show up here.</p>
-      <button class="btn text" id="clearRecents">
-        <svg class="i" viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-sweep"/></svg>Clear recents
-      </button>
+    <h2 class="small-title" id="devLbl" hidden>Device</h2>
+    <div class="group dev-group" id="devGroup" role="group" aria-labelledby="devLbl" hidden></div>
+    <div class="apps-head" id="appsHead" hidden>
+      <h2 class="small-title" id="appsLbl">Apps</h2>
+      <div class="head-acts">
+        <button class="head-act clr-rec" id="clearRecents" type="button" tabindex="-1" aria-hidden="true"><span class="act-txt">Clear recents</span></button>
+      </div>
     </div>
     <div class="group list" id="list"></div>
     <div class="empty" id="empty" hidden>
@@ -649,6 +702,13 @@
       </span>
       <span class="switch" aria-hidden="true"><span class="thumb"><svg class="i" viewBox="0 0 24 24"><use href="#ic-check"/></svg></span></span>
     </button>
+    <button class="row arrow" id="rowShortcut">
+      <span class="row-text">
+        <span class="row-title">Home screen shortcut</span>
+        <span class="row-sum">Add a shortcut to launch this app from your home screen.</span>
+      </span>
+      <svg class="i chev" viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-chev"/></svg>
+    </button>
   </div>
   <h2 class="small-title">Configuration</h2>
   <div class="group">
@@ -706,15 +766,15 @@
       <span class="row-lead" aria-hidden="true"><svg class="i" viewBox="0 0 24 24"><use href="#ic-doc"/></svg></span>
       <span class="row-text">
         <span class="row-title">Save logs</span>
-        <span class="row-sum">Save logs to Android/yc/uperf. Useful for reporting problems to the developer.</span>
+        <span class="row-sum">Save logs to Android/yc/uperf. Useful for debugging.</span>
       </span>
       <svg class="i chev" viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-chev"/></svg>
     </button>
     <button class="row arrow" id="rowRestart">
-      <span class="row-lead" aria-hidden="true"><svg class="i" viewBox="0 0 24 24"><use href="#ic-restart"/></svg></span>
+      <span class="row-lead" aria-hidden="true"><svg class="i ic-m3" viewBox="0 0 24 24"><use href="#ic-restart"/></svg><svg class="i ic-mx" viewBox="0 0 24 24"><use href="#ic-refresh-mx"/></svg></span>
       <span class="row-text">
         <span class="row-title">Restart watcher</span>
-        <span class="row-sum">Restarts the watcher service that detects your apps. Use this if your apps aren't getting detected.</span>
+        <span class="row-sum">Restarts the watcher service that detects your apps. Use this if your apps don't get detected.</span>
       </span>
       <svg class="i chev" viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-chev"/></svg>
     </button>
@@ -799,6 +859,12 @@
       <p class="app-pkg" id="appPkg"></p>
     </div>
   </header>
+  <div class="launch-row" id="launchRow" hidden>
+    <button class="btn tonal launch-btn" id="launchBtn" type="button">
+      <svg class="i" viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-play"/></svg>
+      <span class="launch-lbl">Launch App</span>
+    </button>
+  </div>
   <button class="mod-pill" id="modPill" aria-label="Activate the module from Settings to change boost modes. Open Settings" hidden>
     <svg class="i" viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-warn"/></svg>
     <span class="mod-pill-text">The module is off. Activate it in settings to use the boost modes.</span>
@@ -858,7 +924,7 @@
       <span class="switch" aria-hidden="true"><span class="thumb"><svg class="i" viewBox="0 0 24 24"><use href="#ic-check"/></svg></span></span>
     </button>
   </div>
-  <p class="footnote">Changes apply when you enter the app.</p>
+  <p class="footnote" id="appFoot"></p>
 </main>
 <main class="screen sub" id="scrLicenses" aria-labelledby="licTitle" hidden>
   <div class="topbar solid" id="licBar">
@@ -877,12 +943,16 @@
 <nav class="pillnav glider" id="pillnav" aria-label="Main">
   <span class="ind" aria-hidden="true"></span>
   <button class="nav-item" id="navHome" data-val="home" aria-label="Boost apps" aria-current="page">
-    <svg class="i nav-off" viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-rocket"/></svg>
-    <svg class="i nav-on" viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-rocket-fill"/></svg>
+    <svg class="i nav-off ic-m3" viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-rocket"/></svg>
+    <svg class="i nav-on ic-m3" viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-rocket-fill"/></svg>
+    <svg class="i nav-off ic-mx" viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-rocket-mx"/></svg>
+    <svg class="i nav-on ic-mx" viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-rocket-mx-fill"/></svg>
   </button>
   <button class="nav-item" id="navSettings" data-val="settings" aria-label="Settings">
-    <svg class="i nav-off" viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-gear"/></svg>
-    <svg class="i nav-on" viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-gear-fill"/></svg>
+    <svg class="i nav-off ic-m3" viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-gear"/></svg>
+    <svg class="i nav-on ic-m3" viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-gear-fill"/></svg>
+    <svg class="i nav-off ic-mx" viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-nut-mx"/></svg>
+    <svg class="i nav-on ic-mx" viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-nut-mx-fill"/></svg>
   </button>
 </nav>
 <button class="sel-x" id="selX" type="button" aria-label="Cancel selection" hidden>
@@ -891,6 +961,8 @@
 <button class="sel-fab" id="selFab" type="button" aria-label="Reset selected apps to stock" hidden>
   <svg class="i trash-m3" viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-trash-m3"/></svg>
   <svg class="i trash-mx" viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-trash-mx"/></svg>
+  <svg class="i broom-m3" viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-broom-m3"/></svg>
+  <svg class="i broom-mx" viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-broom-mx"/></svg>
   <span class="sel-count" id="selCount" aria-hidden="true"></span>
 </button>
 <div class="scrim" id="dlg" hidden>
@@ -948,11 +1020,36 @@
     <symbol id="ic-gear-fill" viewBox="0 0 24 24">
       <path fill="currentColor" fill-rule="evenodd" d="M9.98 4.47 10.23 1.95h3.54l.25 2.52 1.88.78 1.95-1.61 2.51 2.51-1.61 1.95.78 1.88 2.52.25v3.54l-2.52.25-.78 1.88 1.61 1.95-2.51 2.51-1.95-1.61-1.88.78-.25 2.52h-3.54l-.25-2.52-1.88-.78-1.95 1.61-2.51-2.51 1.61-1.95-.78-1.88-2.52-.25v-3.54l2.52-.25.78-1.88-1.61-1.95 2.51-2.51 1.95 1.61zM12 8.8a3.2 3.2 0 1 0 0 6.4 3.2 3.2 0 1 0 0-6.4z"/>
     </symbol>
+    <symbol id="ic-nut-mx" viewBox="0 0 24 24">
+      <path stroke-width="1.79" d="M11.14 1.99Q12 1.48 12.86 1.99L20.12 6.24Q20.98 6.74 20.98 7.77V16.23Q20.98 17.26 20.12 17.76L12.86 22.01Q12 22.52 11.14 22.01L3.88 17.76Q3.02 17.26 3.02 16.23V7.77Q3.02 6.74 3.88 6.24Z"/>
+      <circle cx="12" cy="12" r="3.24" stroke-width="1.85"/>
+    </symbol>
+    <symbol id="ic-nut-mx-fill" viewBox="0 0 24 24">
+      <path fill="currentColor" fill-rule="evenodd" stroke-width="1.79" d="M11.14 1.99Q12 1.48 12.86 1.99L20.12 6.24Q20.98 6.74 20.98 7.77V16.23Q20.98 17.26 20.12 17.76L12.86 22.01Q12 22.52 11.14 22.01L3.88 17.76Q3.02 17.26 3.02 16.23V7.77Q3.02 6.74 3.88 6.24ZM12 8.76A3.24 3.24 0 1 0 12 15.24 3.24 3.24 0 1 0 12 8.76Z"/>
+    </symbol>
+    <symbol id="ic-rocket-mx" viewBox="0 0 24 24">
+      <path d="M12 2.45Q16.55 5.6 16.55 11.5V15.35Q16.55 16.65 15.25 16.65H8.75Q7.45 16.65 7.45 15.35V11.5Q7.45 5.6 12 2.45Z"/>
+      <circle cx="12" cy="9.7" r="2"/>
+      <path d="M7.45 12.35 5.2 14.45Q4.5 15.1 4.5 16.05V17.7Q4.5 18.75 5.45 18.3L7.45 17.35M16.55 12.35 18.8 14.45Q19.5 15.1 19.5 16.05V17.7Q19.5 18.75 18.55 18.3L16.55 17.35"/>
+      <path d="M10.2 19.4Q11 21.1 12 21.6 13 21.1 13.8 19.4"/>
+    </symbol>
+    <symbol id="ic-rocket-mx-fill" viewBox="0 0 24 24">
+      <path fill="currentColor" fill-rule="evenodd" d="M12 2.45Q16.55 5.6 16.55 11.5V15.35Q16.55 16.65 15.25 16.65H8.75Q7.45 16.65 7.45 15.35V11.5Q7.45 5.6 12 2.45ZM12 7.2A2.5 2.5 0 1 0 12 12.2 2.5 2.5 0 1 0 12 7.2Z"/>
+      <path fill="currentColor" d="M7.45 12.35 5.2 14.45Q4.5 15.1 4.5 16.05V17.7Q4.5 18.75 5.45 18.3L7.45 17.35ZM16.55 12.35 18.8 14.45Q19.5 15.1 19.5 16.05V17.7Q19.5 18.75 18.55 18.3L16.55 17.35Z"/>
+      <path d="M10.2 19.4Q11 21.1 12 21.6 13 21.1 13.8 19.4"/>
+    </symbol>
     <symbol id="ic-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6"/><path d="m15 15 5 5"/></symbol>
     <symbol id="ic-close" viewBox="0 0 24 24"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/></symbol>
     <symbol id="ic-chev" viewBox="0 0 24 24"><path d="m9.5 6 6 6-6 6"/></symbol>
+    <symbol id="ic-play" viewBox="0 0 24 24"><path fill="currentColor" stroke="none" d="M8 6.1v11.8c0 .9 1 1.4 1.7.9l9-5.9c.6-.4.6-1.4 0-1.8l-9-5.9C9 4.7 8 5.2 8 6.1z"/></symbol>
+    <symbol id="ic-phone" viewBox="0 0 24 24"><rect x="6.5" y="2.5" width="11" height="19" rx="2.6"/><path d="M10.4 18.4h3.2"/></symbol>
+    <symbol id="ic-device" viewBox="0.267 0 28 28"><path fill="currentColor" stroke="none" d="M15.765,4.914C17.493,4.914 18.357,4.914 19.017,5.25C19.598,5.546 20.07,6.018 20.366,6.599C20.702,7.259 20.702,8.123 20.702,9.851V18.149C20.702,19.877 20.702,20.742 20.366,21.402C20.07,21.982 19.598,22.455 19.017,22.75C18.357,23.087 17.493,23.086 15.765,23.086H12.769C11.042,23.086 10.177,23.087 9.518,22.75C8.937,22.455 8.465,21.982 8.169,21.402C7.833,20.742 7.832,19.877 7.832,18.149V9.851C7.832,8.123 7.833,7.259 8.169,6.599C8.465,6.018 8.937,5.546 9.518,5.25C10.177,4.914 11.042,4.914 12.769,4.914H15.765ZM11.966,6.579C11.102,6.579 10.67,6.578 10.34,6.746C10.05,6.894 9.813,7.13 9.665,7.42C9.497,7.75 9.497,8.182 9.497,9.046V18.954C9.497,19.817 9.497,20.25 9.665,20.58C9.813,20.87 10.05,21.106 10.34,21.254C10.67,21.422 11.102,21.422 11.966,21.422H16.568C17.432,21.422 17.864,21.422 18.194,21.254C18.485,21.106 18.721,20.87 18.869,20.58C19.037,20.25 19.037,19.817 19.037,18.954V9.046C19.037,8.182 19.037,7.75 18.869,7.42C18.721,7.13 18.485,6.894 18.194,6.746C17.864,6.578 17.432,6.579 16.568,6.579H11.966Z"/><path fill="currentColor" stroke="none" d="M11.392,7.778L17.143,7.778A0.694,0.694 0,0 1,17.837 8.472L17.837,19.528A0.694,0.694 0,0 1,17.143 20.222L11.392,20.222A0.694,0.694 0,0 1,10.697 19.528L10.697,8.472A0.694,0.694 0,0 1,11.392 7.778z"/></symbol>
+    <symbol id="ic-scroff" viewBox="0.267 0 28 28"><path fill="currentColor" stroke="none" d="M15.765,4.914C17.493,4.914 18.357,4.914 19.017,5.25C19.598,5.546 20.07,6.018 20.366,6.599C20.702,7.259 20.702,8.123 20.702,9.851V18.149C20.702,19.877 20.702,20.742 20.366,21.402C20.07,21.982 19.598,22.455 19.017,22.75C18.357,23.087 17.493,23.086 15.765,23.086H12.769C11.042,23.086 10.177,23.087 9.518,22.75C8.937,22.455 8.465,21.982 8.169,21.402C7.833,20.742 7.832,19.877 7.832,18.149V9.851C7.832,8.123 7.833,7.259 8.169,6.599C8.465,6.018 8.937,5.546 9.518,5.25C10.177,4.914 11.042,4.914 12.769,4.914H15.765ZM11.966,6.579C11.102,6.579 10.67,6.578 10.34,6.746C10.05,6.894 9.813,7.13 9.665,7.42C9.497,7.75 9.497,8.182 9.497,9.046V18.954C9.497,19.817 9.497,20.25 9.665,20.58C9.813,20.87 10.05,21.106 10.34,21.254C10.67,21.422 11.102,21.422 11.966,21.422H16.568C17.432,21.422 17.864,21.422 18.194,21.254C18.485,21.106 18.721,20.87 18.869,20.58C19.037,20.25 19.037,19.817 19.037,18.954V9.046C19.037,8.182 19.037,7.75 18.869,7.42C18.721,7.13 18.485,6.894 18.194,6.746C17.864,6.578 17.432,6.579 16.568,6.579H11.966Z"/><path fill="currentColor" stroke="none" fill-rule="evenodd" d="M15.35,10.1A4.15,4.15 0 1 0 18.35,16.55A3.35,3.35 0 0 1 15.35,10.1Z"/></symbol>
+    <symbol id="ic-scroff-m3" viewBox="0 0 24 24"><rect x="6.5" y="2.5" width="11" height="19" rx="2.6"/><path d="M12.9 8.4a3.3 3.3 0 1 0 2.5 5.2 2.7 2.7 0 0 1-2.5-5.2z"/></symbol>
     <symbol id="ic-back" viewBox="0 0 24 24"><path d="M19.5 12h-15M10.5 6l-6 6 6 6"/></symbol>
     <symbol id="ic-check" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"/></symbol>
+    <symbol id="ic-broom-m3" viewBox="0 0 24 24"><path d="M12 3v6.5M8 9.5h8a1.5 1.5 0 0 1 1.5 1.5v2h-11v-2A1.5 1.5 0 0 1 8 9.5zM6.5 13l-1.2 7.5h13.4L17.5 13M10 16.5v4M14 16.5v4"/></symbol>
+    <symbol id="ic-broom-mx" viewBox="0 0 24 24"><path d="M19.6 4.4l-5.9 5.9M12.2 8.8l3 3c.4.4.4 1 0 1.4l-.9.9-4.4-4.4.9-.9c.4-.4 1-.4 1.4 0zM9.9 9.7l4.4 4.4c-.6 2.9-2.6 5.3-5.4 6.4-.4.2-.8.1-1.1-.2L3.7 16.2c-.3-.3-.4-.8-.2-1.2 1.1-2.7 3.5-4.7 6.4-5.3zM6.4 17.6l2.3-2.3M5.1 13.8l1.8-1"/></symbol>
     <symbol id="ic-sweep" viewBox="0 0 24 24"><path d="M4 7h16M9.5 7V4.5h5V7M6.5 7l1 13h9l1-13M10.5 11v5.5M13.5 11v5.5"/></symbol>
     <symbol id="ic-doc" viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M8.5 13h7M8.5 17h5"/></symbol>
     <symbol id="ic-restart" viewBox="0 0 24 24"><g transform="rotate(10 12 12)"><path d="M18.95 14.81a7.5 7.5 0 1 1-1.65 -8.11"/><path d="M15.95 2.41L17.3 6.7L13.01 8.05" stroke-width="1.62"/></g></symbol>
@@ -960,7 +1057,7 @@
     <symbol id="ic-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.5M12 7.8v.2"/></symbol>
     <symbol id="ic-scale" viewBox="0 0 24 24"><path d="M12 4v16M8 20h8M5 7h14M12 4.5l-7 2.5M12 4.5l7 2.5"/><path d="M5 7 2.5 13a2.6 2.6 0 0 0 5 0zM19 7l-2.5 6a2.6 2.6 0 0 0 5 0z"/></symbol>
     <symbol id="ic-refresh-m3" viewBox="0 0 24 24"><path d="M19 12a7 7 0 0 1-12.2 4.7M5 12a7 7 0 0 1 12.2-4.7"/><path d="M17.5 3.5v4h-4M6.5 20.5v-4h4"/></symbol>
-    <symbol id="ic-refresh-mx" viewBox="0 0 24 24"><g transform="rotate(20 12 12)"><path d="M19.42 15a8 8 0 1 1-1.76 -8.66"/><path d="M16.1 1.59L17.66 6.34L12.91 7.9" stroke-width="2.16"/></g></symbol>
+    <symbol id="ic-refresh-mx" viewBox="0 0 24 24"><path d="M9.19 2.76A9.66 9.66 0 0 1 19.15 18.49M14.66 21.28A9.66 9.66 0 0 1 4.72 5.66" stroke-width="1.73" stroke-linecap="butt"/><path fill="currentColor" stroke="none" d="M17.71 16.14 21.22 20.54 16.54 20.79zM2.78 3.51 7.55 3.36 6.28 7.96z"/></symbol>
     <symbol id="ic-warn" viewBox="0 0 24 24"><path d="M12 3.5 2.5 20h19z"/><path d="M12 10v4.5M12 17.3v.2"/></symbol>
     <symbol id="ic-flame" viewBox="0 0 24 24"><path d="M12 21.5c-3.9 0-6.5-2.6-6.5-6.2 0-3.4 2.5-5.3 3.6-8.3.6 1.6 1.4 2.6 2.4 3.1.3-2.7 1.5-5 3.7-6.6-.2 3 1 4.9 2.3 6.6 1.1 1.4 1 3.1 1 4.9 0 3.7-2.6 6.5-6.5 6.5z"/></symbol>
     <symbol id="ic-trash-m3" viewBox="0 0 24 24"><path d="M4 6.5h16M9 6.5V4h6v2.5M6 6.5V19a1.5 1.5 0 0 0 1.5 1.5h9A1.5 1.5 0 0 0 18 19V6.5M10 10.5v6M14 10.5v6"/></symbol>
@@ -985,6 +1082,10 @@
       <path d="M12 2.5 20.5 7v10L12 21.5 3.5 17V7z"/>
       <path d="M3.5 7 12 11.5 20.5 7M12 11.5v10"/>
     </symbol>
+    <filter id="mx-lens" x="0" y="0" width="1" height="1" filterUnits="objectBoundingBox" primitiveUnits="objectBoundingBox" color-interpolation-filters="sRGB">
+      <feImage id="mxLensMap" x="0" y="0" width="1" height="1" preserveAspectRatio="none" result="map"/>
+      <feDisplacementMap in="SourceGraphic" in2="map" scale="0.3" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
     <symbol id="ic-bubble" viewBox="0 0 24 24">
       <g transform="translate(11.1 11) scale(1.1) translate(-11.1 -11)">
         <path d="M5 15.5 3.8 20.7 8.5 18.1A7.6 7.6 0 1 0 5 15.5z"/>

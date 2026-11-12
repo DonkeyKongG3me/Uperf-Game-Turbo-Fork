@@ -3,6 +3,7 @@ APPVIS_HOSTS="me.weishu.kernelsu me.weishu.kernelsu.pr com.rifsxd.ksunext com.su
 APPVIS_PERM="com.android.permission.GET_INSTALLED_APPS"
 APPVIS_QAP="android.permission.QUERY_ALL_PACKAGES"
 APPVIS_MIOP="10022"
+APPVIS_MISC="10017"
 appvis_is_mi() {
     [ -n "$(getprop ro.mi.os.version.name)" ] || [ -n "$(getprop ro.miui.ui.version.name)" ] || [ -n "$(getprop ro.miui.ui.version.code)" ]
 }
@@ -46,6 +47,8 @@ appvis_one() {
         for u in $(appvis_users); do
             appops set --user "$u" "$p" "$APPVIS_MIOP" allow >/dev/null 2>&1 ||
                 appops set "$p" "$APPVIS_MIOP" allow >/dev/null 2>&1
+            appops set --user "$u" "$p" "$APPVIS_MISC" allow >/dev/null 2>&1 ||
+                appops set "$p" "$APPVIS_MISC" allow >/dev/null 2>&1
         done
         appops get "$p" "$APPVIS_MIOP" 2>/dev/null | grep -qi "allow" && ok=0
     fi

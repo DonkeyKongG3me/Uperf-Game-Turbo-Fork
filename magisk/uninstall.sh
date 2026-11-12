@@ -12,8 +12,17 @@ wait_until_login() {
     done
     rm "$test_file"
 }
+still_installed() {
+    local m=/data/adb/modules/uperf
+    [ -d /data/adb/modules_update/uperf ] && return 0
+    [ -f "$m/update" ] && return 0
+    [ -f "$m/module.prop" ] && [ ! -f "$m/remove" ] && return 0
+    return 1
+}
 on_remove() {
     wait_until_login
+    sleep 5
+    still_installed && exit 0
     cp -af $USER_PATH/boost.conf /sdcard/boost.conf.keep 2>/dev/null
     rm -rf $USER_PATH
     if [ -f /sdcard/boost.conf.keep ]; then
@@ -21,6 +30,6 @@ on_remove() {
         mv /sdcard/boost.conf.keep $USER_PATH/boost.conf
     fi
     rm -f /data/powercfg*
-    rm -rf /dev/uperf_boost /data/adb/uperf_ui
+    rm -rf /dev/uperf_boost /data/adb/uperf_ui /data/adb/uperf_boost.conf.bak
 }
 (on_remove &)

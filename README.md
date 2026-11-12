@@ -2,9 +2,9 @@
 
 <img src="assets/banner.png" alt="Uperf Game Turbo Fork Logo" width="200">
 
-# Uperf Game Turbo Fork
+# Uperf Game Turbo
 
-Revolutionary performance module for Android. Supports 118 CPUs.
+**Brand new performance module for Android supporting 118 CPUs, with 4 customizable profiles for every app.**
 
 [![Release](https://img.shields.io/github/v/release/DonkeyKongG3me/Uperf-Game-Turbo-Fork?style=flat-square)](https://github.com/DonkeyKongG3me/Uperf-Game-Turbo-Fork/releases/latest)
 [![Downloads](https://img.shields.io/github/downloads/DonkeyKongG3me/Uperf-Game-Turbo-Fork/total?style=flat-square)](https://github.com/DonkeyKongG3me/Uperf-Game-Turbo-Fork/releases)
@@ -13,23 +13,46 @@ Revolutionary performance module for Android. Supports 118 CPUs.
 
 </div>
 
-## Overview
+## Overview:
 
- Uperf Game Turbo Fork is a revolutionary Magisk/APatch/KernelSU module that lets you choose between 4 performance profiles for each app. It dramatically improves speed and responsiveness for apps you choose. Unselected apps use the stock performance settings.
+ **Uperf Game Turbo** is a **revolutionary Magisk/APatch/KernelSU module** that offers **4 performance profiles that apply in select apps or your entire device**. It can dramatically improve the **speed and responsiveness of your device**, or improve the **battery life** if you decide to use efficient presets.
+ 
+ ## QNA:
 
- This module is designed to be used long-term unlike other performance modules that apply a fast profile to the entire device temporarily. You can enjoy both insane speeds and battery life without needing multiple modules.
+ ### Why do I need yet another performance module?
+ 
+- **Good question.** This module is designed to activate performance profiles **only for apps you assigned**, meaning you don't need to remove it after one use, as the stock performance returns as soon as you leave a boosted app.
+ 
+ 
+ ### Is my device supported?
+ 
+- **Most likely.** The module uses the original **Uperf-Game-Turbo's 118 CPU configs** (***with a little tweaks from my end***), so it's possible that your device is supported.
+
+- **See the full supported CPU list here:** https://pastebin.com/YdXKdBuk
+ 
+ ### Good to know:
+ 
+- The installation script automatically checks if your device is supported. Sometimes, an **incorrect profile may be assigned to your device,** so **check what config was applied before rebooting!**
+ 
+ ### Is it open source?
+ 
+- Yes, **the entire module is open source.** Download the release you want to check and inspect the contents inside. Note that **some files come from the original uperf module,** which **may not be open source!**
 
 ---
 
 ### **Features:**
 
-- **Performance profiles** that each app can use based on your choice
+- **Performance profiles** that each app can use based on your choice.
+
+- **Apply performance profiles** to the **entire device** or while your screen is off. (***V1.3+ required***)
 
 - **4 performance profiles** ranging from ***Efficient*** to ***Extreme***
 
-- **Disable CPU throttling**, **spoof battery temperature & age**, **increase touch response** in boosted apps and more (***V1.1+ required***)
+- 3 special **Screen Off profiles.**
 
-- Toggle to **disable & enable** the module in the UI (no reboot required)
+- **Disable CPU throttling**, **spoof battery temperature**, **increase touch response** in boosted apps and **more** (***V1.1+ required***)
+
+- Toggle to **disable & enable** the module in the UI (***No reboot required***)
 
 - Sliders to change **how often** the module scans for **boosted apps**
 
@@ -37,13 +60,13 @@ Revolutionary performance module for Android. Supports 118 CPUs.
 
 - **Gather useful logs** directly from the app that can be used for debugging
 
-- ***and more :)***
+- ***and much more :)***
 
 ---
 
 ### ❗ Magisk dependency
 
-You have to install either [WebUI X](https://github.com/MMRLApp/WebUI-X-Portable/releases) (highly recommended) or [KSU WebUI Standalone](https://github.com/KOWX712/KsuWebUIStandalone/releases) to use the module. Only required for Magisk, as newer root managers support a WebUI natively.
+You need to install [WebUI X](https://github.com/MMRLApp/WebUI-X-Portable/releases) (recommended) or [KSU WebUI Standalone](https://github.com/KOWX712/KsuWebUIStandalone/releases) to use this module. This is only required for Magisk.
 
 ---
 
@@ -86,14 +109,14 @@ You have to install either [WebUI X](https://github.com/MMRLApp/WebUI-X-Portable
 
 | Profile | Behavior |
 | --- | --- |
-| Efficient | Power saving profile that limits the CPU to 0.75W and ramp-up speed to 0.8ms. |
-| Balanced | Balanced profile that limits the CPU to ~2W and ramp-up speed to 0.2ms. |
+| Efficient | Power saving profile that limits the CPU to 0.7W and ramp-up speed to 0.9ms. |
+| Balanced | Balanced profile that limits the CPU to 2W and ramp-up speed to 0.2ms. |
 | Rapid | Rapid profile that doesn't limit the CPU and ramp-up speed. |
 | Extreme | Extreme profile that always runs the CPU and memory at 100% with no ramp delay. |
 
 ---
 
-### 📩 Install
+### How to install:
 
 1. Download from the latest release.
 2. Open your root manager and flash the module.
@@ -102,6 +125,6 @@ You have to install either [WebUI X](https://github.com/MMRLApp/WebUI-X-Portable
 5. Choose the apps you want to boost.
 6. Done!
 
-## ⚖️ Licenses
+## Licenses:
 
 Distributed under the same license as the upstream projects. See [LICENSE](LICENSE) and the notices in the Credits section.

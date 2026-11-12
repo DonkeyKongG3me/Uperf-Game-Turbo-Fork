@@ -47,6 +47,7 @@ install_uperf() {
     mkdir -p "$USER_PATH"
     mv -f "$USER_PATH/uperf.json" "$USER_PATH/uperf.json.bak" 2>/dev/null
     cp -f "$MODULE_PATH/config/$cfgname.json" "$USER_PATH/uperf.json"
+    cp -f "$MODULE_PATH/config/$cfgname.json" "$MODULE_PATH/uperf_default.json"
     rm -rf "$MODULE_PATH/config"
     set_perm_recursive "$BIN_PATH" 0 0 0755 0755 u:object_r:system_file:s0
 }
@@ -84,7 +85,7 @@ allow_app_list() {
     for l in $r; do
         case "$l" in
         ok:* | na:*)
-            [ "$shown" = 0 ] && echo "" && echo "- Letting the WebUI see your installed apps..."
+            [ "$shown" = 0 ] && echo "" && echo "- Letting the WebUI see your installed apps and add home screen shortcuts..."
             shown=1
             case "$l" in
             ok:*) echo "  ${l#ok:}: allowed" ;;
